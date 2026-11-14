@@ -6,12 +6,10 @@ GitHub Pages serves docs/ directly (Settings → Pages → main → /docs); any 
 import hashlib
 import json
 import pathlib
-import struct
-import zlib
+import shutil
 
 ROOT = pathlib.Path(__file__).resolve().parent
 DIST = ROOT / "docs"
-ACCENT = (30, 96, 145)
 
 HEAD = """<!doctype html>
 <html lang="en">
@@ -30,42 +28,6 @@ HEAD = """<!doctype html>
 """
 
 
-def png(size):
-    """App icon: accent tile with a white card and a stripe, drawn pixel by pixel (no dependencies)."""
-    r = size * 0.22
-    rows = []
-    for y in range(size):
-        row = bytearray([0])
-        for x in range(size):
-            # rounded-square mask (iOS masks it anyway; Android 'any' icons look right)
-            cx = min(max(x, r), size - 1 - r)
-            cy = min(max(y, r), size - 1 - r)
-            inside = (x - cx) ** 2 + (y - cy) ** 2 <= r * r
-            col, a = ACCENT, 255 if inside else 0
-            fx, fy = x / size, y / size
-            in_card = 0.2 <= fx <= 0.8 and 0.3 <= fy <= 0.7
-            if in_card:
-                # card corners
-                k = 0.06
-                ccx = min(max(fx, 0.2 + k), 0.8 - k)
-                ccy = min(max(fy, 0.3 + k), 0.7 - k)
-                in_card = (fx - ccx) ** 2 + (fy - ccy) ** 2 <= k * k
-            if in_card:
-                col = (255, 255, 255)
-                if 0.39 <= fy <= 0.46:
-                    col = (245, 166, 35)  # stripe
-                elif 0.56 <= fy <= 0.61 and 0.27 <= fx <= 0.47:
-                    col = (196, 214, 230)
-            row += bytes(col) + bytes([a])
-        rows.append(bytes(row))
-    raw = zlib.compress(b"".join(rows), 9)
-
-    def chunk(tag, data):
-        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
-
-    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)) + chunk(b"IDAT", raw) + chunk(b"IEND", b"")
-
-
 def main():
     DIST.mkdir(exist_ok=True)
     app = (ROOT / "app.html").read_text(encoding="utf-8")
@@ -73,8 +35,9 @@ def main():
     (DIST / "index.html").write_text(HEAD + app + "\n</html>\n", encoding="utf-8")
     (DIST / ".nojekyll").write_text("", encoding="utf-8")  # GitHub Pages: serve files as-is
 
-    for name, size in [("icon-192.png", 192), ("icon-512.png", 512), ("apple-touch-icon.png", 180)]:
-        (DIST / name).write_bytes(png(size))
+    # Icons are rendered from icons/icon.svg by icons/render.py
+    for name in ["icon-192.png", "icon-512.png", "apple-touch-icon.png"]:
+        shutil.copyfile(ROOT / "icons" / name, DIST / name)
 
     manifest = {
         "name": "Selavu: card & expense tracker",
@@ -85,8 +48,8 @@ def main():
         "background_color": "#f2f4f7",
         "theme_color": "#1e6091",
         "icons": [
-            {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
-            {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+            {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
         ],
         "shortcuts": [{"name": "Log a payment", "url": "./#add"}],
     }

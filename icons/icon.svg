@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Full-bleed black square: iOS and Android round the corners themselves.
+       Wordmark: Montserrat Light (Google Fonts), widely tracked capitals, champagne-gold gradient.
+       It stays inside Android's circular "maskable" safe zone (r ≈ 410). -->
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3dca2"/>
+      <stop offset="0.55" stop-color="#c79a45"/>
+      <stop offset="1" stop-color="#e9cf8f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="#000000"/>
+  <!-- x is nudged right by half the letter-spacing so the tracked word sits optically centred -->
+  <text x="525" y="563" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="300"
+        font-size="146" letter-spacing="26" fill="url(#gold)">SELAVU</text>
+</svg>

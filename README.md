@@ -211,8 +211,11 @@ The Excel builder downloads the first time you use it. *Export CSV* always works
 ```
 app.html      The whole app: markup, styles and script in one file (the source to edit)
 build.py      Builds docs/ (adds PWA head tags, manifest, offline service worker, icons)
+icons/        icon.svg (the source) and the PNGs rendered from it
 docs/         Built site, served by GitHub Pages or any static host
 ```
+
+To change the app icon, edit `icons/icon.svg`, then run `python icons/render.py` (needs Chrome or Edge, plus internet for the Montserrat font) and `python build.py`.
 
 ```bash
 python build.py
