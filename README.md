@@ -7,7 +7,7 @@ A phone app for tracking card spending by **billing cycle**. It opens from a lin
 - **Bills** tab: every statement with its total, due date and a *Mark paid* toggle
 - Charts: category donut, 6-month trend by card, daily spend
 - **Syncs to your own Google Sheet** automatically: a row per entry, a tab per bill month, charts. It downloads as Excel and doubles as your backup.
-- **Family mode:** each family member logs on their own phone (iPhone or Android) into one shared sheet. Every entry is tagged **who spent it** (a person, or Family), and you can filter by person.
+- **Family mode:** each family member uses their own phone (iPhone or Android) with their own cards and sees only their own spending, while everything lands in one shared sheet with **who spent it**.
 - **Insights:** where the money went this month compared with your usual, and where you can cut back.
 
 ---
@@ -221,28 +221,35 @@ It works offline too: entries wait on the phone and go out when you're back onli
 
 ## 8. Track spending as a family
 
-Everyone in the household logs on their own phone, and everything lands in **one shared Google Sheet**. Each phone shows the whole household, and you can switch between **All**, each person, and **Family**. Add as many people as you like.
+Each person uses Selavu on **their own phone** with **their own cards**, and everything they log also goes into **one shared Google Sheet**.
 
-**One sheet per household.** Another household (for example your parents) makes **their own copy** of the template sheet and gets their own connection link. Their data never mixes with yours, and nobody sees another household's entries unless they have that household's link.
+| | Your phone | Your spouse's phone | Google Sheet |
+|---|---|---|---|
+| Cards | Your cards | Their cards | Everyone's cards, with an **Owner** column |
+| Entries, totals, insights, bills | Only yours | Only theirs | Everything, with **For** and **Logged by** columns |
 
-**How entries are separated**
+The sheet is where you see the household together: the **Summary** tab has *Spending by person* per month, and every month tab has a *Spent by* table. Anyone can also use Selavu on their own without a sheet, or with their own sheet.
+
+> This keeps each phone tidy; it is not a privacy wall. Everyone on the same link can open the sheet. For data nobody else can see, use separate sheets.
+
+**One sheet per household.** Another household (for example your parents) makes **their own copy** of the template sheet and gets their own connection link. Their data never mixes with yours.
+
+**What gets recorded with each entry**
 
 | | What it means | Set by |
 |---|---|---|
-| **Spent by** (on each entry) | Whose spending it is: a person, or **Family** (shared costs) | Automatically: the person using the phone. Groceries, Rent, Bills and Home repairs default to **Family**. Change it with one tap. |
-| **Belongs to** (on each card) | Whose bill it is: a person, or **Joint** | When adding the card. The card's own phone lists it first. |
-| **Logged by** | Which phone entered it | Automatically |
+| **Spent by** | **Me**, or **Family** for shared costs | Automatically **Me**. Groceries, Rent, Bills and Home repairs default to **Family**. Change it with one tap. |
+| **Logged by** | Which person's phone entered it | Automatically |
+| **Owner** (on each card) | Whose card it is. **Joint** cards appear on every phone. | Automatically the phone's person when a card is added |
 
-So if a family member pays with your add-on card, the bill stays on **your** card (Bills tab), but the spend counts as **theirs** (or Family). Budgets are for the whole household; the Home screen shows **Who spent** how much each month.
+If your spouse pays with your add-on card, they can add it on their phone as their own card (e.g. "SBI add-on"), or you can mark your card **Joint** so it appears on both phones.
 
 **Set it up**
 
-1. **On your phone** (already connected to the sheet): **Settings → People → Add my name** (your existing cards and entries become yours) → **+ Add person** for each family member.
+1. **On your phone** (connected to the sheet): **Settings → People → Add my name**. Your existing cards and entries become yours. Add the other family members with **+ Add person** (optional; they can also add themselves).
 2. **Install Selavu on their phone** (step 2; on Android use **Chrome → ⋮ → Add to Home screen / Install app**).
-3. On their phone: **Settings → Connect Google Sheet** → paste **the same connection link** you use → **Connect** → pick their name under **Who uses this phone?**
-4. They add their own cards (**Settings → + Add card**; **Belongs to** is already set to them). Your cards are already there, so they can also log on your add-on card.
-
-That's it. Entries from any phone show up on the others within a couple of minutes, or straight away with **Sync now**. Anyone in the household can fix or delete any entry.
+3. On their phone: **Settings → Connect Google Sheet** → paste **the same connection link** → **Connect** → choose their name under **Who uses this phone?** (or type it).
+4. They add their own cards (**Settings → + Add card**) and start logging.
 
 > Every phone in the household must use the same connection link, and the sheet must run the latest script (see [Updating the sheet script](#11-updating-the-sheet-script)).
 
@@ -291,7 +298,7 @@ When Selavu gets a new feature that needs the sheet (like Family mode), the scri
 Yes, it's free, and no account is needed. It's a web app, so it skips the App Store entirely.
 
 **Can two phones share the same data?**
-Yes. Connect them with the same link (see [Track spending as a family](#8-track-spending-as-a-family)). Each phone sends only what changed and then picks up the other phone's entries, so nothing is overwritten. If both phones edit the *same* entry at the same time, the later one wins.
+Yes. Connect them with the same link (see [Track spending as a family](#8-track-spending-as-a-family)). Each phone sends only what changed, so nothing is overwritten; each phone shows its own person's entries and the sheet shows everyone's. If both phones edit the *same* entry at the same time, the later one wins.
 
 **Can I edit entries in the Google Sheet?**
 Yes, small fixes (a note, a category, an amount) come back to the phones on their next sync. Don't change the ID column. For anything bigger, use the app.

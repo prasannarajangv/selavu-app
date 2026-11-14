@@ -334,14 +334,28 @@ var FIXED_CATS = ['Rent & Housing', 'EMI & Loans', 'Bills & Utilities', 'Subscri
 function personById(id) { for (var i = 0; i < S.people.length; i++) if (S.people[i].id === id) return S.people[i]; return null; }
 function personName(id) { return id === 'family' ? 'Family' : (personById(id) || {}).name || ''; }
 function shared() { return S.people.length >= 2; }
-function whoChoices() { return S.people.map(function (p) { return { id: p.id, name: p.name }; }).concat([{ id: 'family', name: 'Family' }]); }
+// Once this phone knows whose it is, it shows only that person's cards and spending.
+// Everyone's entries still go to (and come back from) the shared Google Sheet.
+function personal() { return !!personById(S.me); }
+function visible(t) { return !personal() || t.by === S.me || (!t.by && whoOf(t) === S.me); }
+function myCard(c) { return !personal() || c.owner === S.me || !c.owner || c.owner === 'family'; }
+function myCards() { return S.cards.filter(myCard); }
+function myTx() { return S.tx.filter(visible); }
+// "Spent by" choices: on a personal phone just Me or Family (shared cost).
+function whoChoices() {
+  var ppl = personal() ? [personById(S.me)] : S.people;
+  return ppl.map(function (p) { return { id: p.id, name: p.name }; }).concat([{ id: 'family', name: 'Family' }]);
+}
 // Whose spending an entry is: its own tag, else the card owner.
 function whoOf(t) { if (t.for) return t.for; var c = cardById(t.card); return (c && c.owner) || ''; }
-function scope(list) { return ui.who ? list.filter(function (t) { return whoOf(t) === ui.who; }) : list; }
+function scope(list) {
+  if (personal()) return list.filter(visible);
+  return ui.who ? list.filter(function (t) { return whoOf(t) === ui.who; }) : list;
+}
 // This phone's cards first, then joint, then the others.
 function cardsSorted() {
   var rank = function (c) { return c.owner === S.me ? 0 : (!c.owner || c.owner === 'family') ? 1 : 2; };
-  return S.cards.map(function (c, i) { return [rank(c), i, c]; }).sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }).map(function (x) { return x[2]; });
+  return myCards().map(function (c, i) { return [rank(c), i, c]; }).sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }).map(function (x) { return x[2]; });
 }
 
 function stmtDay(card) { return card && card.type === 'Credit' ? (+card.stmtDay || 0) : 0; }
@@ -476,7 +490,7 @@ function sampleBanner() {
 
 // All | each person | Family filter (shown once two or more people are set up).
 function whoBar() {
-  if (!shared()) return '';
+  if (!shared() || personal()) return '';
   if (ui.who && ui.who !== 'family' && !personById(ui.who)) ui.who = '';
   return '<div class="chips who-bar" role="group" aria-label="Show spending of">' +
     [{ id: '', name: 'All' }].concat(whoChoices()).map(function (p) {
@@ -485,7 +499,7 @@ function whoBar() {
 }
 
 function viewHome() {
-  if (!S.cards.length) {
+  if (!myCards().length) {
     return '<section class="card empty"><div class="big" style="font-size:26px">Track every card, cycle by cycle</div>' +
       '<p class="muted">Add your cards once: credit cards with their statement day, plus debit, UPI or cash. Then log each payment in one tap.</p>' +
       '<div class="btns" style="width:100%"><button type="button" class="btn" data-act="new-card">Add my first card</button>' +
@@ -512,7 +526,7 @@ function viewHome() {
   h += viewInsights(ym);
 
   // Who spent (household view)
-  if (shared() && !ui.who && spent) {
+  if (shared() && !personal() && !ui.who && spent) {
     var byWho = whoChoices().map(function (p) { return { id: p.id, name: p.name, v: sum(exp.filter(function (t) { return whoOf(t) === p.id; })) }; });
     var none = spent - byWho.reduce(function (a, p) { return a + p.v; }, 0);
     if (none > 0) byWho.push({ id: '', name: 'Not tagged', v: none });
@@ -523,9 +537,9 @@ function viewHome() {
   }
 
   // Cards for this bill month: wallet-style tiles, swipe sideways
-  if (S.cards.length) {
+  if (myCards().length) {
     var t0 = today0();
-    h += '<section class="card"><div class="row"><h2>Cards · ' + esc(ymLabel(ym)) + '</h2><span class="small muted">' + (S.cards.length > 1 ? 'Swipe ›' : '') + '</span></div><div class="ctiles">';
+    h += '<section class="card"><div class="row"><h2>Cards · ' + esc(ymLabel(ym)) + '</h2><span class="small muted">' + (myCards().length > 1 ? 'Swipe ›' : '') + '</span></div><div class="ctiles">';
     cardsSorted().forEach(function (c) {
       var amt = chargedOn(c.id, ym), tag = '', sub, foot = '';
       if (stmtDay(c)) {
@@ -543,7 +557,7 @@ function viewHome() {
         '<div class="t-top"><span class="t-name">' + esc(c.name) + '</span>' + tag + '</div>' +
         '<div class="t-amt">' + inr.format(amt) + '</div>' +
         '<div class="t-foot"><div><div class="t-sub">' + sub + '</div>' +
-        (shared() && c.owner ? '<div class="owner">' + esc(c.owner === 'family' ? 'Joint' : personName(c.owner)) + '</div>' : '') +
+        (shared() && !personal() && c.owner ? '<div class="owner">' + esc(c.owner === 'family' ? 'Joint' : personName(c.owner)) + '</div>' : '') +
         (c.limit ? '<div class="t-sub">of ' + inr.format(+c.limit) + ' limit</div>' : '') + '</div>' + foot + '</div></button>';
     });
     h += '</div></section>';
@@ -565,11 +579,11 @@ function viewHome() {
   h += '</section>';
 
   // 6-month trend by card
-  var series = S.cards.map(function (c) { return { name: c.name, color: c.color }; });
+  var series = myCards().map(function (c) { return { name: c.name, color: c.color }; });
   var cols = [];
   for (var i = -5; i <= 0; i++) {
     var m = ymAdd(ym, i), list = expenses(scope(inMonth(m)));
-    cols.push({ label: ymShort(m), strong: i === 0, values: S.cards.map(function (c) { return sum(list.filter(function (t) { return t.card === c.id; })); }) });
+    cols.push({ label: ymShort(m), strong: i === 0, values: myCards().map(function (c) { return sum(list.filter(function (t) { return t.card === c.id; })); }) });
   }
   h += '<section class="card"><h2>Last 6 months by card</h2>' + stackedBars(cols, series) +
     '<div class="chips">' + series.map(function (s) { return '<span class="small muted" style="display:inline-flex;gap:6px;align-items:center"><span class="swatch" style="background:' + s.color + '"></span>' + esc(s.name) + '</span>'; }).join('') + '</div></section>';
@@ -604,7 +618,7 @@ function viewInsights(ym) {
   var cur = expenses(scope(inMonth(ym))), spent = sum(cur);
   // A bill month spans from the earliest card cycle start (e.g. 23 Oct) to the end of the calendar month.
   var p = ym.split('-'), start = new Date(+p[0], +p[1] - 1, 1), end = new Date(+p[0], +p[1], 0);
-  S.cards.forEach(function (c) { if (stmtDay(c)) { var st = statement(c, ym); if (st.start < start) start = st.start; if (st.end > end) end = st.end; } });
+  myCards().forEach(function (c) { if (stmtDay(c)) { var st = statement(c, ym); if (st.start < start) start = st.start; if (st.end > end) end = st.end; } });
   var span = Math.round((end - start) / 864e5) + 1, t0 = today0();
   var isCur = ym === now, f = isCur ? Math.min(Math.max((Math.round((t0 - start) / 864e5) + 1) / span, 0), 1) : 1;
   var dim = span, day = Math.round((t0 - start) / 864e5) + 1;
@@ -685,7 +699,7 @@ function meter(v, max) {
 }
 
 function viewHistory() {
-  if (!S.cards.length) return viewHome();
+  if (!myCards().length) return viewHome();
   var list = scope(inMonth(ui.ym)).filter(function (t) {
     if (ui.cardFilter && t.card !== ui.cardFilter) return false;
     if (!ui.q) return true;
@@ -709,14 +723,14 @@ function viewHistory() {
 }
 
 function viewBills() {
-  var cc = S.cards.filter(function (c) { return stmtDay(c); });
+  var cc = myCards().filter(function (c) { return stmtDay(c); });
   if (!cc.length) return '<section class="card empty"><p class="muted">Add a credit card with its statement day in Settings to see bills here.</p><button type="button" class="btn" data-act="new-card">Add a credit card</button></section>';
   var t0 = today0(), h = sampleBanner();
   cc.forEach(function (c) {
     var dates = S.tx.filter(function (t) { return t.card === c.id; }).map(function (t) { return billMonth(t); });
     var open = billMonthFor(c, new Date());
     var first = dates.length ? dates.reduce(function (a, b) { return a < b ? a : b; }) : open;
-    h += '<section class="card"><div class="cc-head"><span class="swatch" style="background:' + c.color + '"></span><span class="cc-name">' + esc(c.name) + '</span><span class="small muted">' + (shared() && c.owner ? esc(c.owner === 'family' ? 'Joint' : personName(c.owner)) + ' · ' : '') + 'Statement on ' + ordinal(c.stmtDay) + '</span></div>';
+    h += '<section class="card"><div class="cc-head"><span class="swatch" style="background:' + c.color + '"></span><span class="cc-name">' + esc(c.name) + '</span><span class="small muted">' + (shared() && !personal() && c.owner ? esc(c.owner === 'family' ? 'Joint' : personName(c.owner)) + ' · ' : '') + 'Statement on ' + ordinal(c.stmtDay) + '</span></div>';
     for (var m = open; m >= first; m = ymAdd(m, -1)) {
       var st = statement(c, m), amt = chargedOn(c.id, m), key = c.id + '|' + m, paid = !!S.paid[key], isOpen = st.date > t0;
       var dueSoon = !paid && !isOpen && st.due && (st.due - t0) / 864e5 <= 3;
@@ -733,8 +747,8 @@ function ordinal(n) { n = +n; var s = ['th', 'st', 'nd', 'rd'], v = n % 100; ret
 
 function viewSettings() {
   var h = '<section class="card"><div class="row"><h2>Your cards</h2><button type="button" class="linkish" data-act="new-card">+ Add card</button></div>';
-  if (!S.cards.length) h += '<p class="muted small" style="margin:0">No cards yet.</p>';
-  S.cards.forEach(function (c) {
+  if (!myCards().length) h += '<p class="muted small" style="margin:0">No cards yet.</p>';
+  myCards().forEach(function (c) {
     h += '<div class="set-row"><div class="cc-head" style="min-width:0"><span class="swatch" style="background:' + c.color + '"></span><div style="min-width:0"><div class="cc-name">' + esc(c.name) + '</div>' +
       '<div class="small muted">' + (shared() && c.owner ? esc(c.owner === 'family' ? 'Joint' : personName(c.owner)) + ' · ' : '') + esc(c.type) + (stmtDay(c) ? ' · statement ' + ordinal(c.stmtDay) + (c.dueDay ? ' · due ' + ordinal(c.dueDay) : c.dueDays ? ' · due +' + c.dueDays + ' days' : '') : '') + (c.limit ? ' · limit ' + inr.format(+c.limit) : '') + '</div></div></div>' +
       '<button type="button" class="linkish" data-card="' + c.id + '">Edit</button></div>';
@@ -779,7 +793,8 @@ function viewSettings() {
 
   h += '<section class="card"><h2>This phone</h2>' +
     '<button type="button" class="btn danger block" data-act="reset">Delete all data on this phone</button></section>' +
-    '<p class="small muted" style="text-align:center;margin:4px 0">Selavu · works offline · ' + S.tx.length + ' entries · ' + S.cards.length + ' cards</p>';
+    '<p class="small muted" style="text-align:center;margin:4px 0">Selavu · works offline · ' + myTx().length + ' entries · ' + myCards().length + ' cards' +
+      (personal() && S.tx.length > myTx().length ? ' on this phone · ' + S.tx.length + ' in the household sheet' : '') + '</p>';
   return h;
 }
 
@@ -850,13 +865,16 @@ function quickPicks() {
 }
 
 function openExpense(t, prefill) {
-  if (!S.cards.length) { toast('Add a card first'); openCard(); return; }
+  if (!myCards().length) { toast('Add a card first'); openCard(); return; }
   var edit = !!t;
   prefill = prefill || {};
   var cards = cardsSorted();
-  t = t ? Object.assign({}, t) : { id: uid(), date: toLocal(new Date()), card: (cardById(S.lastCard) || cards[0]).id, amount: '', kind: 'Expense', category: '', note: '',
+  if (t && !cards.some(function (c) { return c.id === t.card; }) && cardById(t.card)) cards = cards.concat([cardById(t.card)]);
+  var lastOk = cardById(S.lastCard) && myCard(cardById(S.lastCard));
+  t = t ? Object.assign({}, t) : { id: uid(), date: toLocal(new Date()), card: (lastOk ? cardById(S.lastCard) : cards[0]).id, amount: '', kind: 'Expense', category: '', note: '',
                                     for: personById(S.me) ? S.me : '', by: personById(S.me) ? S.me : '' };
   if (shared() && !t.for) t.for = whoOf(t) || S.me;
+  if (personal() && t.for && t.for !== S.me && t.for !== 'family' && !edit) t.for = S.me;
   if (prefill.amount) t.amount = prefill.amount;
   if (prefill.card) t.card = prefill.card;
   if (prefill.category) t.category = prefill.category;
@@ -968,7 +986,7 @@ function openCard(c) {
     '<label class="f" for="cName">Name <span class="hint">(any name you\'ll recognise)</span><input class="in" id="cName" value="' + esc(c.name) + '" autocomplete="off"></label>' +
     '<div class="seg" id="cType">' + CARD_TYPES.map(function (k) { return '<button type="button" data-v="' + k + '" aria-pressed="' + (c.type === k) + '">' + k + '</button>'; }).join('') + '</div>' +
     (shared() ? '<div class="f" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Belongs to <span class="hint">(whose bill it is)</span></span>' +
-      choices('cOwner', whoChoices().map(function (p) { return { id: p.id, name: p.id === 'family' ? 'Joint' : p.name }; }), c.owner) + '</div>' : '') +
+      choices('cOwner', whoChoices().map(function (p) { return { id: p.id, name: p.id === 'family' ? 'Joint (all phones)' : p.name }; }), c.owner) + '</div>' : '') +
     '<div id="cCredit" style="display:grid;gap:12px">' +
     '<div class="f" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Statement day <span class="hint">(the "Statement date" on your bill)</span></span>' +
     '<button type="button" class="in daybtn" id="cStmtBtn" aria-expanded="false" aria-controls="cStmtGrid"></button>' + dayGrid('cStmtGrid', 28) + '</div>' +
@@ -1017,7 +1035,7 @@ function openCard(c) {
     $('#cSave', sh).addEventListener('click', function () {
       c.name = $('#cName', sh).value.trim();
       if (!c.name) { toast('Give the card a name'); return; }
-      if (S.cards.some(function (x) { return x.id !== c.id && x.name.toLowerCase() === c.name.toLowerCase(); })) { toast('You already have a card with that name'); return; }
+      if (myCards().some(function (x) { return x.id !== c.id && x.name.toLowerCase() === c.name.toLowerCase(); })) { toast('You already have a card with that name'); return; }
       if (c.type === 'Credit') {
         if (!(c.stmtDay >= 1 && c.stmtDay <= 28)) { toast('Choose the statement day'); $('#cStmtBtn', sh).click(); return; }
         c.limit = Math.round(+String($('#cLimit', sh).value).replace(/[^\d.]/g, '')) || '';
@@ -1036,7 +1054,7 @@ function openCard(c) {
       S.cards = S.cards.filter(function (x) { return x.id !== c.id; });
       S.tx = S.tx.filter(function (t) { if (t.card === c.id) { queueDel(t.id); return false; } return true; });
       Object.keys(S.paid).forEach(function (k) { if (k.indexOf(c.id + '|') === 0) { delete S.paid[k]; queue('paid', k); } });
-      if (S.lastCard === c.id) S.lastCard = S.cards[0] ? S.cards[0].id : null;
+      if (S.lastCard === c.id) S.lastCard = myCards()[0] ? myCards()[0].id : null;
       queue('card', c.id);
       save(); closeSheet(); render(); toast('Card deleted');
     });
@@ -1330,7 +1348,7 @@ function openConnect() {
       }
       go.disabled = true; go.textContent = 'Checking…'; msg.textContent = ''; msg.className = 'small';
       api({ action: 'ping' }, conn).then(function (j) {
-        if (!j.v || j.v < 2) throw new Error('Your sheet\'s script is older than the app. Paste the new Code.gs into the sheet and deploy a new version (see the guide).');
+        if (!j.v || j.v < 3) throw new Error('Your sheet\'s script is older than the app. Paste the new Code.gs into the sheet and deploy a new version (see the guide).');
         closeSheet();
         afterConnect(conn, j);
       }).catch(function (e) { go.disabled = false; go.textContent = 'Connect'; msg.textContent = e.message; msg.className = 'small up'; });
@@ -1346,7 +1364,7 @@ function afterConnect(conn, ping) {
     '<button type="button" class="btn block" id="aMerge">Add this phone\'s entries to the sheet</button>' +
     '<button type="button" class="btn ghost block" id="aSheet">Use only the sheet (removes this phone\'s ' + here + ')</button>' +
     '<button type="button" class="btn ghost block" id="aNo">Cancel</button>' +
-    '<p class="small muted" style="margin:0">Cards and people with the same name are joined, not duplicated.</p>', function (sh) {
+    '<p class="small muted" style="margin:0">People with the same name are joined, not duplicated.</p>', function (sh) {
     $('#aNo', sh).addEventListener('click', closeSheet);
     $('#aMerge', sh).addEventListener('click', function () { closeSheet(); connectAndMerge(conn, ping, true); });
     $('#aSheet', sh).addEventListener('click', function () { closeSheet(); connectAndMerge(conn, ping, false); });
@@ -1361,7 +1379,6 @@ function connectAndMerge(conn, ping, keepLocal) {
   var mine = { tx: S.tx.map(function (t) { return t.id; }), cards: S.cards.map(function (c) { return c.id; }) };
   return api({ action: 'sync', rev: '', ops: [] }).then(function (j) {
     joinByName(j);
-    mine.cards = S.cards.map(function (c) { return c.id; });   // after joining, same-name cards are the sheet's (already owned)
     queueAll();
     applySnapshot(j);
     S.sync.rev = '';
@@ -1378,18 +1395,11 @@ function connectAndMerge(conn, ping, keepLocal) {
   }, function (e) { S.sync = backup; save(); render(); toast(e.message); });
 }
 
-// When joining a sheet, a card or person this phone already has under the same name becomes the sheet's one.
+// When joining a sheet, a person this phone already has under the same name becomes the sheet's one.
 function joinByName(j) {
   var byName = function (list) { var m = {}; (list || []).forEach(function (x) { m[String(x.name).toLowerCase()] = String(x.id); }); return m; };
-  var rc = byName(j.cards), rp = byName(j.people);
-  S.cards = S.cards.filter(function (c) {
-    var rid = rc[c.name.toLowerCase()];
-    if (!rid || rid === c.id) return true;
-    S.tx.forEach(function (t) { if (t.card === c.id) t.card = rid; });
-    Object.keys(S.paid).forEach(function (k) { if (k.indexOf(c.id + '|') === 0) { S.paid[rid + k.slice(c.id.length)] = S.paid[k]; delete S.paid[k]; } });
-    if (S.lastCard === c.id) S.lastCard = rid;
-    return false;
-  });
+  // Cards are never joined by name: two people may each have a card called "HDFC UPI".
+  var rp = byName(j.people);
   S.people = S.people.filter(function (p) {
     var rid = rp[p.name.toLowerCase()];
     if (!rid || rid === p.id) return true;

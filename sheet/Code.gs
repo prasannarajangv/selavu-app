@@ -10,10 +10,10 @@
  * and a hidden _Settings tab for budgets, paid bills and people.
  */
 
-var VERSION = 2;
+var VERSION = 3;
 
 var TX = 'Transactions', CARDS = 'Cards', SUMMARY = 'Summary', SETTINGS = '_Settings', OLD = 'Old data';
-var TX_HEAD = ['ID', 'Date', 'Card', 'Amount (₹)', 'Kind', 'Category', 'Note', 'Bill Month', 'Cycle', 'Updated', 'For', 'Logged by'];
+var TX_HEAD = ['ID', 'Date', 'Card', 'Amount (₹)', 'Kind', 'Category', 'Note', 'Bill Month', 'Cycle', 'Updated', 'For', 'Logged by', 'Card ID'];
 var CARD_HEAD = ['Card', 'Type', 'Statement day', 'Payment due day', 'Credit limit (₹)', 'Colour', 'ID', 'Owner'];
 var FIXED_TABS = [SUMMARY, TX, CARDS, OLD, SETTINGS];
 var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -236,7 +236,7 @@ function applyTx_(ss, ops) {
 function row_(t, tz) {
   return [t.id, Utilities.parseDate(t.date, tz, "yyyy-MM-dd'T'HH:mm"), t.card, Number(t.amount), t.kind, t.category || '',
     t.note || '', t.billMonth ? Utilities.parseDate(t.billMonth + '-01', tz, 'yyyy-MM-dd') : '', t.cycle || '', new Date(),
-    t['for'] || '', t.by || ''];
+    t['for'] || '', t.by || '', t.cardId || ''];
 }
 
 function idIndex_(sh) {
@@ -281,14 +281,14 @@ function pull_(ss) {
     if (!id) { id = 'p' + Utilities.getUuid().slice(0, 8); pid[name.toLowerCase()] = id; st.people.push({ id: id, name: name }); peopleAdded = true; }
     return id;
   };
-  var cards = [], byName = {};
-  readCards_(ss).forEach(function (c) { c.owner = who(c.owner); cards.push(c); byName[c.name.toLowerCase()] = c; });
+  var cards = [], byName = {}, byId = {};
+  readCards_(ss).forEach(function (c) { c.owner = who(c.owner); cards.push(c); byId[c.id] = c; if (!byName[c.name.toLowerCase()]) byName[c.name.toLowerCase()] = c; });
   var tx = [];
   var sh = ss.getSheetByName(TX);
   if (sh.getLastRow() > 1) {
     sh.getRange(2, 1, sh.getLastRow() - 1, TX_HEAD.length).getValues().forEach(function (r) {
       if (!r[0] || !(r[1] instanceof Date)) return;
-      var name = String(r[2]), c = byName[name.toLowerCase()];
+      var name = String(r[2]), c = byId[String(r[12] || '')] || byName[name.toLowerCase()];
       if (!c) { c = { id: 'c' + Utilities.getUuid().slice(0, 8), name: name, type: /\bcc\b|credit/i.test(name) ? 'Credit' : 'Debit',
                       stmtDay: '', dueDay: '', limit: '', color: '' }; cards.push(c); byName[name.toLowerCase()] = c; }
       tx.push({ id: String(r[0]), date: Utilities.formatDate(r[1], tz, "yyyy-MM-dd'T'HH:mm"), card: c.id, amount: Number(r[3]),
@@ -310,10 +310,15 @@ function ensureTabs_(ss) {
     tx.getRange(1, 1, 1, TX_HEAD.length).setValues([TX_HEAD]);
     styleHead_(tx.getRange(1, 1, 1, TX_HEAD.length));
     tx.setFrozenRows(1);
-    [80, 150, 140, 100, 90, 150, 220, 100, 130, 150, 110, 110].forEach(function (w, i) { tx.setColumnWidth(i + 1, w); });
-  } else if (tx.getRange(1, 11).getValue() !== 'For') {
+    [80, 150, 140, 100, 90, 150, 220, 100, 130, 150, 110, 110, 110].forEach(function (w, i) { tx.setColumnWidth(i + 1, w); });
+  }
+  if (tx.getRange(1, 11).getValue() !== 'For') {
     tx.getRange(1, 11, 1, 2).setValues([['For', 'Logged by']]);   // sheets made before people were added
     styleHead_(tx.getRange(1, 11, 1, 2));
+  }
+  if (tx.getRange(1, 13).getValue() !== 'Card ID') {
+    tx.getRange(1, 13).setValue('Card ID');   // tells apart two people's cards with the same name
+    styleHead_(tx.getRange(1, 13));
   }
   var cs = ss.getSheetByName(CARDS) || ss.insertSheet(CARDS);
   if (cs.getRange(1, 1).getValue() !== 'Card') {
