@@ -3,10 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1e6091">
+<meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap">
 <meta name="apple-mobile-web-app-title" content="Selavu">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -16,22 +20,29 @@
 <style>
 /* Layout: phone-first app shell — sticky month header, scrolling cards, fixed bottom tab bar, bottom-sheet forms. */
 :root {
-  --bg: #f2f4f7; --surface: #ffffff; --surface-2: #f7f8fa; --fg: #141b24; --muted: #66717f; --line: #e1e5eb;
-  --accent: #1e6091; --accent-fg: #ffffff; --accent-soft: #e3eef7;
-  --good: #23855a; --warn: #b26a00; --bad: #c2392f; --warn-soft: #fdf1dc; --bad-soft: #fbe5e3;
-  --shadow: 0 1px 2px rgba(20,27,36,.06), 0 4px 16px rgba(20,27,36,.06);
+  /* Light: warm ivory with deep gold. Dark (default look of the icon): black with gold. */
+  --bg: #f4f1ea; --surface: #ffffff; --surface-2: #f8f6f1; --fg: #17150f; --muted: #6b6558; --line: #e7e1d4;
+  --accent: #8a6a1e; --accent-fg: #ffffff; --accent-soft: #f3ead6;
+  --gold: linear-gradient(135deg, #f0d48c 0%, #c99d48 55%, #a07832 100%); --gold-fg: #1a1407;
+  --hero: linear-gradient(160deg, #fffaf0 0%, #ffffff 60%);
+  --brand: linear-gradient(135deg, #b8903c 0%, #7a5814 100%);
+  --good: #1f7a50; --warn: #b4580f; --bad: #c2392f; --warn-soft: #fbecdd; --bad-soft: #fbe5e3; --good-soft: #e2f2e9;
+  --shadow: 0 1px 2px rgba(40,30,10,.05), 0 6px 20px rgba(40,30,10,.06);
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --display: "Montserrat", var(--font);
   --nav-h: 64px;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0d1117; --surface: #161c24; --surface-2: #1c232d; --fg: #e6ebf1; --muted: #93a0ae; --line: #27303b;
-  --accent: #5fa8dc; --accent-fg: #0d1117; --accent-soft: #19293a;
-  --good: #5cc28f; --warn: #eaa846; --bad: #ef7d73; --warn-soft: #2c2415; --bad-soft: #321b1a;
+  --bg: #0a0a0b; --surface: #141416; --surface-2: #1b1b1e; --fg: #f3efe6; --muted: #9d978a; --line: #29292d;
+  --accent: #d6b25e; --accent-fg: #15120a; --accent-soft: #2a2415;
+  --hero: radial-gradient(120% 90% at 100% 0%, rgba(214,178,94,.16) 0%, rgba(214,178,94,0) 55%), #141416; --brand: var(--gold);
+  --good: #6cc59a; --warn: #f0954f; --bad: #ef7d73; --warn-soft: #2e1f14; --bad-soft: #321b1a; --good-soft: #15291f;
   --shadow: none; color-scheme: dark } }
 :root[data-theme="dark"] {
-  --bg: #0d1117; --surface: #161c24; --surface-2: #1c232d; --fg: #e6ebf1; --muted: #93a0ae; --line: #27303b;
-  --accent: #5fa8dc; --accent-fg: #0d1117; --accent-soft: #19293a;
-  --good: #5cc28f; --warn: #eaa846; --bad: #ef7d73; --warn-soft: #2c2415; --bad-soft: #321b1a;
+  --bg: #0a0a0b; --surface: #141416; --surface-2: #1b1b1e; --fg: #f3efe6; --muted: #9d978a; --line: #29292d;
+  --accent: #d6b25e; --accent-fg: #15120a; --accent-soft: #2a2415;
+  --hero: radial-gradient(120% 90% at 100% 0%, rgba(214,178,94,.16) 0%, rgba(214,178,94,0) 55%), #141416; --brand: var(--gold);
+  --good: #6cc59a; --warn: #f0954f; --bad: #ef7d73; --warn-soft: #2e1f14; --bad-soft: #321b1a; --good-soft: #15291f;
   --shadow: none; color-scheme: dark }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -45,7 +56,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 12px 10px; }
 .top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 720px; margin: 0 auto; }
-.brand { font-weight: 700; font-size: 20px; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+.brand { font: 400 19px/1 var(--display); letter-spacing: .26em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+.brand .word { background: var(--brand, var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .sync-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; display: inline-block; }
 .sync-dot.ok { background: var(--good); } .sync-dot.wait { background: var(--warn); } .sync-dot.bad { background: var(--bad); }
 .sync-dot.busy { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
@@ -57,19 +69,20 @@ header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; b
 .month span { min-width: 92px; text-align: center; font-weight: 600; font-size: 14px; }
 
 main { max-width: 720px; margin: 0 auto; padding-block: 4px calc(var(--nav-h) + 88px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); display: grid; gap: 12px; min-width: 0; }
-.card h2 { font-size: 13px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; box-shadow: var(--shadow); display: grid; gap: 12px; min-width: 0; }
+.card h2 { font-size: 12px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.card.hero { background: var(--hero); border-color: var(--line); }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
-.big { font-size: 34px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.big { font: 600 38px/1.1 var(--display); letter-spacing: -.01em; }
 .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.kpi { background: var(--surface-2); border-radius: 10px; padding: 10px; display: grid; gap: 2px; min-width: 0; }
-.kpi b { font-size: 16px; }
+.kpi { background: var(--surface-2); border-radius: 12px; padding: 10px; display: grid; gap: 2px; min-width: 0; }
+.kpi b { font: 600 16px var(--display); }
 .kpi span { font-size: 12px; color: var(--muted); }
 .up { color: var(--bad); } .down { color: var(--good); }
 .meter { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--line); }
-.meter i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.meter i { display: block; height: 100%; background: var(--gold); border-radius: 99px; transition: width .5s ease; }
 .meter.warn i { background: var(--warn); } .meter.bad i { background: var(--bad); }
 
 .cc { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
@@ -87,30 +100,38 @@ main { max-width: 720px; margin: 0 auto; padding-block: 4px calc(var(--nav-h) + 
 .leg { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center; font-size: 14px; }
 .leg .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .leg .meter { grid-column: 2 / 4; height: 5px; }
+.chips.who-bar { margin: 0 -16px 2px; padding: 0 16px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.who-bar::-webkit-scrollbar { display: none; }
+.who-bar .chip { flex: none; }
+.who-bar .chip { padding: 6px 12px; }
+.who-row { grid-template-columns: 1fr auto; border: 0; background: none; padding: 0; color: inherit; text-align: left; font: inherit; }
+.who-row .meter { grid-column: 1 / 3; }
 svg text { fill: var(--muted); font: 11px var(--font); }
 svg .lbl-strong { fill: var(--fg); font-weight: 700; font-size: 18px; }
 
 .list { display: grid; }
 .day { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 14px 4px 6px; }
-.tx { display: grid; grid-template-columns: 36px 1fr auto; gap: 12px; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--line); background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; width: 100%; }
+.tx { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--line); background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; width: 100%; }
 .tx:last-child { border-bottom: 0; }
-.ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; }
+.ico { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; font-size: 19px; line-height: 1; }
 .tx .t1 { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tx .t2 { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tx .amt { font-weight: 600; text-align: right; }
+.tx .amt { font: 600 15px var(--display); text-align: right; }
 .tx .amt.other { color: var(--muted); font-style: italic; }
 .tx > div { min-width: 0; }
 
-nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line);
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: color-mix(in srgb, var(--surface) 88%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
 nav.tabs .inner { max-width: 720px; margin: 0 auto; height: var(--nav-h); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; }
 nav.tabs button { border: 0; background: none; display: grid; justify-items: center; gap: 3px; font-size: 11px; color: var(--muted); padding: 6px 0; }
 nav.tabs button[aria-current="page"] { color: var(--accent); font-weight: 600; }
 nav.tabs svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-nav.tabs .add { width: 56px; height: 56px; border-radius: 18px; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; margin: -22px auto 0; box-shadow: 0 6px 18px rgba(30,96,145,.35); }
+nav.tabs .add { width: 56px; height: 56px; border-radius: 50%; background: var(--gold); color: var(--gold-fg); display: grid; place-items: center; margin: -22px auto 0; box-shadow: 0 8px 22px rgba(201,157,72,.38); transition: transform .15s; }
+nav.tabs button:active .add { transform: scale(.94); }
 nav.tabs .add svg { width: 28px; height: 28px; stroke-width: 2.4; }
 
-.btn { border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 600; background: var(--accent); color: var(--accent-fg); }
+.btn { border: 0; border-radius: 14px; padding: 13px 16px; font-weight: 600; background: var(--gold); color: var(--gold-fg); }
+.btn:active { transform: scale(.98); }
 .btn.ghost { background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); }
 .btn.danger { background: var(--bad-soft); color: var(--bad); }
 .btn.block { width: 100%; }
@@ -124,19 +145,20 @@ nav.tabs .add svg { width: 28px; height: 28px; stroke-width: 2.4; }
 @keyframes up { from { transform: translateY(30px); opacity: .6 } to { transform: none; opacity: 1 } }
 @media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
 .grab { width: 40px; height: 5px; border-radius: 9px; background: var(--line); margin: 0 auto; }
-.sheet h3 { margin: 0; font-size: 18px; }
+.sheet h3 { margin: 0; font: 600 19px var(--display); }
 label.f { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .in { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); font-size: 16px; color: var(--fg); }
-.amount-in { font-size: 38px; font-weight: 700; text-align: center; border: 0; background: none; padding: 4px; width: 100%; color: var(--fg); }
-.amount-wrap { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 38px; font-weight: 700; color: var(--muted); border-bottom: 2px solid var(--line); }
+.amount-in { font: 600 40px var(--display); text-align: center; border: 0; background: none; padding: 4px; width: 100%; color: var(--fg); }
+.amount-wrap { display: flex; align-items: center; justify-content: center; gap: 4px; font: 500 40px var(--display); color: var(--muted); border-bottom: 2px solid var(--line); }
 .amount-wrap:focus-within { border-color: var(--accent); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 8px 12px; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.chip .em { font-size: 15px; line-height: 1; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
 .chip .swatch { width: 9px; height: 9px; border-radius: 50%; }
 .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
 .seg button { border: 0; background: none; border-radius: 8px; padding: 8px 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); outline: 1px solid var(--line); }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .daybtn { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; cursor: pointer; }
 .daybtn[aria-expanded="true"] { border-color: var(--accent); }
@@ -159,12 +181,48 @@ label.f { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var
 .stmt:last-child { border-bottom: 0; }
 .toggle { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; }
 .toggle[aria-pressed="true"] { background: var(--good); border-color: var(--good); color: var(--surface); }
+
+/* Wallet-style card tiles (Home): swipe sideways */
+.ctiles { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: -16px; padding: 2px 16px 6px; scrollbar-width: none; }
+.ctiles::-webkit-scrollbar { display: none; }
+.ctile { flex: 0 0 min(82%, 320px); scroll-snap-align: start; aspect-ratio: 1.6; border-radius: 18px; padding: 16px; color: #fff; position: relative; overflow: hidden;
+  display: grid; grid-template-rows: auto 1fr auto; box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+.ctile::after { content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%; right: -70px; top: -90px; background: rgba(255,255,255,.09); pointer-events: none; }
+.ctile .t-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ctile .t-name { font-weight: 600; font-size: 15px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctile .t-tag { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px; background: rgba(255,255,255,.2); white-space: nowrap; }
+.ctile .t-tag.bad { background: #fff; color: #b3261e; }
+.ctile .t-amt { align-self: center; font: 600 28px/1.1 var(--display); letter-spacing: -.01em; }
+.ctile .t-sub { font-size: 12px; opacity: .85; }
+.ctile .t-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.ctile .ring { width: 46px; height: 46px; flex: none; }
+.ctile .ring text { fill: #fff; font: 600 11px var(--display); }
+.ctile .owner { font-size: 11px; opacity: .85; }
+
+/* Insights */
+.ins { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; padding: 2px 0; }
+.ins .i { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-size: 17px; background: var(--surface-2); }
+.ins.bad .i { background: var(--bad-soft); } .ins.good .i { background: var(--good-soft); } .ins.warn .i { background: var(--warn-soft); }
+.ins p { margin: 0; font-size: 14px; line-height: 1.45; }
+.ins p b { font-weight: 600; }
+.ins .tip { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+/* Quick add on the add screen */
+.quick { display: flex; gap: 8px; overflow-x: auto; margin-inline: -16px; padding: 0 16px 2px; scrollbar-width: none; }
+.quick::-webkit-scrollbar { display: none; }
+.quick button { flex: none; border: 1px solid var(--line); background: var(--surface-2); border-radius: 14px; padding: 8px 12px; text-align: left; display: grid; gap: 1px; max-width: 170px; }
+.quick button b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quick button span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quick button.on { border-color: var(--accent); background: var(--accent-soft); }
+#view > * { animation: fade .25s ease-out both; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { #view > * { animation: none; } .meter i { transition: none; } }
 code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
 </style>
 
 <header class="top gutter">
   <div class="top-row">
-    <div class="brand">Selavu <span id="syncDot" class="sync-dot" role="img" hidden></span></div>
+    <div class="brand"><span class="word">Selavu</span> <span id="syncDot" class="sync-dot" role="img" hidden></span></div>
     <div class="month" id="monthNav">
       <button type="button" id="prevM" aria-label="Previous month">‹</button>
       <span id="monthLbl"></span>
@@ -198,7 +256,9 @@ var CATS = ['Food & Dining', 'Groceries', 'Fuel', 'Travel', 'Shopping', 'Bills &
   'Health', 'Subscriptions', 'EMI & Loans', 'Entertainment', 'Gifts & Functions', 'Sports & Fitness', 'Personal', 'Savings & Investments', 'Other'];
 var CAT_COLORS = ['#e07b39', '#3a9d6e', '#c9473d', '#2f8fc2', '#8a5cc2', '#d4a72c', '#5b6fd6', '#a07040', '#d0587e', '#3aa3a0',
   '#7d8a99', '#b85cb0', '#e09a2f', '#4d9b3a', '#c77d64', '#2f6fb3', '#9aa4b0'];
+var CAT_ICONS = ['🍔', '🛒', '⛽', '✈️', '🛍️', '💡', '🏠', '🔧', '💊', '📺', '🏦', '🎬', '🎁', '🏸', '💇', '📈', '📦'];
 var KINDS = ['Expense', 'Transfer', 'Lent', 'Received'];
+var KIND_ICONS = { Transfer: '🔁', Lent: '🤝', Received: '💰' };
 var CARD_TYPES = ['Credit', 'Debit', 'UPI', 'Cash'];
 var CARD_COLORS = ['#2f6fb3', '#e07b39', '#3a9d6e', '#8a5cc2', '#c9473d', '#c99a1c', '#3b9fb5', '#7d8a99'];
 // Free text (from imports or a Shortcut) → [kind, category]
@@ -218,18 +278,35 @@ var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
 
 // ---------- State ----------
 var S = load();
-var ui = { tab: 'home', ym: ymOf(new Date()), q: '', cardFilter: '' };
+var ui = { tab: 'home', ym: ymOf(new Date()), q: '', cardFilter: '', who: '' };
 
+// people: the household ({id, name}); me: who uses THIS phone (never synced).
+// Entry: for = person id or 'family' (whose spending it is), by = who logged it. Card: owner = person id or 'family' (joint).
 function blank() {
-  return { v: 1, cards: [], tx: [], budgets: {}, paid: {}, lastCard: null, sample: false,
-           sync: { url: '', key: '', sheetUrl: '', ops: [], meta: false, full: false, last: '', error: '' } };
+  return { v: 1, cards: [], tx: [], budgets: {}, paid: {}, people: [], me: '', lastCard: null, sample: false,
+           sync: { url: '', key: '', sheetUrl: '', ops: [], rev: '', last: '', error: '' } };
 }
 function load() {
   try {
     var raw = localStorage.getItem(STORE);
-    if (raw) { var s = JSON.parse(raw); if (s && s.v === 1) return Object.assign(blank(), s); }
+    if (raw) { var s = JSON.parse(raw); if (s && s.v === 1) return migrate(Object.assign(blank(), s)); }
   } catch (e) { /* storage blocked: run in memory */ }
   return blank();
+}
+// Older versions queued {op, id} and whole-list "meta"/"full" flags; turn them into per-item changes.
+function migrate(s) {
+  var sy = s.sync = Object.assign(blank().sync, s.sync), ops = [];
+  var add = function (k, id) { if (!ops.some(function (o) { return o.k === k && o.id === id; })) ops.push({ k: k, id: id }); };
+  (sy.ops || []).forEach(function (o) { add(o.k || 'tx', o.id); });
+  if (sy.meta || sy.full) {
+    s.cards.forEach(function (c) { add('card', c.id); });
+    Object.keys(s.budgets).forEach(function (k) { add('budget', k); });
+    Object.keys(s.paid).forEach(function (k) { add('paid', k); });
+  }
+  if (sy.full) s.tx.forEach(function (t) { add('tx', t.id); });
+  sy.ops = ops; delete sy.meta; delete sy.full;
+  s.people = s.people || [];
+  return s;
 }
 function save() {
   try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) { toast('Could not save on this device. Export a backup from Settings.'); }
@@ -249,6 +326,24 @@ function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDat
 function today0() { var t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
 
 function cardById(id) { for (var i = 0; i < S.cards.length; i++) if (S.cards[i].id === id) return S.cards[i]; return null; }
+// ---------- People ----------
+// Household categories default to "Family" when a new entry is logged (until the For choice is tapped).
+var SHARED_CATS = ['Groceries', 'Rent & Housing', 'Bills & Utilities', 'Home & Repairs'];
+// Paid about once a month, so insights don't project them forward day by day.
+var FIXED_CATS = ['Rent & Housing', 'EMI & Loans', 'Bills & Utilities', 'Subscriptions', 'Savings & Investments'];
+function personById(id) { for (var i = 0; i < S.people.length; i++) if (S.people[i].id === id) return S.people[i]; return null; }
+function personName(id) { return id === 'family' ? 'Family' : (personById(id) || {}).name || ''; }
+function shared() { return S.people.length >= 2; }
+function whoChoices() { return S.people.map(function (p) { return { id: p.id, name: p.name }; }).concat([{ id: 'family', name: 'Family' }]); }
+// Whose spending an entry is: its own tag, else the card owner.
+function whoOf(t) { if (t.for) return t.for; var c = cardById(t.card); return (c && c.owner) || ''; }
+function scope(list) { return ui.who ? list.filter(function (t) { return whoOf(t) === ui.who; }) : list; }
+// This phone's cards first, then joint, then the others.
+function cardsSorted() {
+  var rank = function (c) { return c.owner === S.me ? 0 : (!c.owner || c.owner === 'family') ? 1 : 2; };
+  return S.cards.map(function (c, i) { return [rank(c), i, c]; }).sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }).map(function (x) { return x[2]; });
+}
+
 function stmtDay(card) { return card && card.type === 'Credit' ? (+card.stmtDay || 0) : 0; }
 
 // Bill month = month the statement is made. Statement-day purchases go to the next cycle.
@@ -286,6 +381,21 @@ function chargedOn(cardId, ym) { return sum(S.tx.filter(function (t) { return t.
 // ---------- Rendering helpers ----------
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function catColor(c) { var i = CATS.indexOf(c); return i < 0 ? '#9aa4b0' : CAT_COLORS[i]; }
+function catIcon(c) { var i = CATS.indexOf(c); return i < 0 ? '📦' : CAT_ICONS[i]; }
+function txIcon(t) { return t.kind === 'Expense' ? catIcon(t.category) : KIND_ICONS[t.kind] || '💸'; }
+// Darken (-) or lighten (+) a #rrggbb colour by a fraction.
+function shade(hex, f) {
+  var n = parseInt(String(hex || '#7d8a99').slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  var m = function (v) { return Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f); };
+  return 'rgb(' + m(r) + ',' + m(g) + ',' + m(b) + ')';
+}
+// A row of choices: a segmented control for up to 3, wrapping chips beyond that.
+function choices(id, items, selected) {
+  var many = items.length > 3;
+  return '<div class="' + (many ? 'chips' : 'seg') + '" id="' + id + '">' + items.map(function (it) {
+    return '<button type="button"' + (many ? ' class="chip"' : '') + ' data-v="' + esc(it.id) + '" aria-pressed="' + (selected === it.id) + '">' + esc(it.name) + '</button>';
+  }).join('') + '</div>';
+}
 function initials(s) { return esc(String(s || '?').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase() || '?'); }
 function $(sel, root) { return (root || document).querySelector(sel); }
 function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
@@ -364,6 +474,16 @@ function sampleBanner() {
   return S.sample ? '<div class="banner"><span>You are looking at <b>sample data</b>.</span><button type="button" class="linkish" data-act="clear-sample">Clear sample &amp; start fresh</button></div>' : '';
 }
 
+// All | each person | Family filter (shown once two or more people are set up).
+function whoBar() {
+  if (!shared()) return '';
+  if (ui.who && ui.who !== 'family' && !personById(ui.who)) ui.who = '';
+  return '<div class="chips who-bar" role="group" aria-label="Show spending of">' +
+    [{ id: '', name: 'All' }].concat(whoChoices()).map(function (p) {
+      return '<button type="button" class="chip" data-who="' + p.id + '" aria-pressed="' + (ui.who === p.id) + '">' + esc(p.name) + (p.id && p.id === S.me ? ' (me)' : '') + '</button>';
+    }).join('') + '</div>';
+}
+
 function viewHome() {
   if (!S.cards.length) {
     return '<section class="card empty"><div class="big" style="font-size:26px">Track every card, cycle by cycle</div>' +
@@ -372,46 +492,61 @@ function viewHome() {
       '<button type="button" class="btn ghost" data-act="sample">Try with sample data</button></div></section>';
   }
   var ym = ui.ym, now = ymOf(new Date());
-  var month = inMonth(ym), exp = expenses(month), spent = sum(exp);
-  var last = sum(expenses(inMonth(ymAdd(ym, -1))));
+  var month = scope(inMonth(ym)), exp = expenses(month), spent = sum(exp);
+  var last = sum(expenses(scope(inMonth(ymAdd(ym, -1)))));
   var change = last ? (spent / last - 1) : null;
   var p = ym.split('-'), dim = new Date(+p[0], +p[1], 0).getDate();
   var days = ym === now ? new Date().getDate() : dim;
-  var budgetTotal = CATS.reduce(function (a, c) { return a + (+S.budgets[c] || 0); }, 0);
+  // Budgets are for the whole household, so they show only on the "All" view.
+  var budgetTotal = ui.who ? 0 : CATS.reduce(function (a, c) { return a + (+S.budgets[c] || 0); }, 0);
 
-  var h = sampleBanner();
-  h += '<section class="card"><div class="row"><h2>Spent in ' + esc(ymLabel(ym)) + ' bills</h2>' +
+  var h = sampleBanner() + whoBar();
+  h += '<section class="card hero"><div class="row"><h2>' + (ui.who ? esc(personName(ui.who)) + ' · ' : 'Spent in ') + esc(ymLabel(ym)) + ' bills</h2>' +
     (ym === now ? '<span class="pill">This month</span>' : ym > now ? '<span class="pill warn">Upcoming</span>' : '<span class="pill good">Closed</span>') + '</div>' +
-    '<div class="big">' + inr.format(spent) + '</div>' +
+    '<div class="big" data-count="' + spent + '">' + inr.format(spent) + '</div>' +
     (budgetTotal ? meter(spent, budgetTotal) + '<div class="small muted">' + inr.format(Math.max(budgetTotal - spent, 0)) + ' left of ' + inr.format(budgetTotal) + ' budget</div>' : '') +
     '<div class="kpis"><div class="kpi"><b>' + inr.format(last) + '</b><span>Last month</span></div>' +
     '<div class="kpi"><b class="' + (change == null ? '' : change > 0 ? 'up' : 'down') + '">' + (change == null ? '–' : (change > 0 ? '+' : '') + Math.round(change * 100) + '%') + '</b><span>Change</span></div>' +
     '<div class="kpi"><b>' + inr.format(days ? spent / days : 0) + '</b><span>Per day</span></div></div></section>';
 
-  // Cards for this bill month
-  var cc = S.cards.filter(function (c) { return stmtDay(c); });
-  var other = S.cards.filter(function (c) { return !stmtDay(c); });
+  h += viewInsights(ym);
+
+  // Who spent (household view)
+  if (shared() && !ui.who && spent) {
+    var byWho = whoChoices().map(function (p) { return { id: p.id, name: p.name, v: sum(exp.filter(function (t) { return whoOf(t) === p.id; })) }; });
+    var none = spent - byWho.reduce(function (a, p) { return a + p.v; }, 0);
+    if (none > 0) byWho.push({ id: '', name: 'Not tagged', v: none });
+    h += '<section class="card"><h2>Who spent</h2><div class="legend">' + byWho.filter(function (p) { return p.v; }).sort(function (a, b) { return b.v - a.v; }).map(function (p) {
+      return '<button type="button" class="leg who-row"' + (p.id ? ' data-who="' + p.id + '"' : ' disabled') + '><span class="nm">' + esc(p.name) + '</span><b>' + inr.format(p.v) +
+        ' <span class="small muted">' + Math.round(p.v / spent * 100) + '%</span></b>' + meter(p.v, spent) + '</button>';
+    }).join('') + '</div></section>';
+  }
+
+  // Cards for this bill month: wallet-style tiles, swipe sideways
   if (S.cards.length) {
-    h += '<section class="card"><h2>Cards · ' + esc(ymLabel(ym)) + '</h2>';
     var t0 = today0();
-    cc.forEach(function (c) {
-      var st = statement(c, ym), amt = chargedOn(c.id, ym), open = st.date > t0, key = c.id + '|' + ym, paid = S.paid[key];
-      var status;
-      if (st.start > t0) status = '<span class="pill">Not started</span>';
-      else if (open) status = '<span class="pill">' + Math.round((st.date - t0) / 864e5) + ' days to statement</span>';
-      else if (paid) status = '<span class="pill good">Paid</span>';
-      else if (st.due && (st.due - t0) / 864e5 <= 3) status = '<span class="pill bad">' + (st.due < t0 ? 'Overdue' : 'Due ' + dayLabel(st.due)) + '</span>';
-      else status = '<span class="pill warn">' + (st.due ? 'Due ' + dayLabel(st.due) : 'Statement out') + '</span>';
-      h += '<div class="cc"><div class="cc-head"><span class="swatch" style="background:' + c.color + '"></span><span class="cc-name">' + esc(c.name) + '</span>' + status + '</div>' +
-        '<div class="row"><b style="font-size:20px">' + inr.format(amt) + '</b><span class="small muted">' + dayLabel(st.start) + ' – ' + dayLabel(st.end) + '</span></div>' +
-        (c.limit ? meter(amt, +c.limit) + '<div class="cc-meta"><span>' + Math.round(amt / c.limit * 100) + '% of ' + inr.format(+c.limit) + ' limit</span></div>' : '') + '</div>';
+    h += '<section class="card"><div class="row"><h2>Cards · ' + esc(ymLabel(ym)) + '</h2><span class="small muted">' + (S.cards.length > 1 ? 'Swipe ›' : '') + '</span></div><div class="ctiles">';
+    cardsSorted().forEach(function (c) {
+      var amt = chargedOn(c.id, ym), tag = '', sub, foot = '';
+      if (stmtDay(c)) {
+        var st = statement(c, ym), paid = S.paid[c.id + '|' + ym];
+        if (st.start > t0) tag = 'Not started';
+        else if (st.date > t0) tag = Math.round((st.date - t0) / 864e5) + ' days to statement';
+        else if (paid) tag = 'Paid ✓';
+        else if (st.due && (st.due - t0) / 864e5 <= 3) tag = '<span class="t-tag bad">' + (st.due < t0 ? 'Overdue' : 'Due ' + dayLabel(st.due)) + '</span>';
+        else tag = st.due ? 'Due ' + dayLabel(st.due) : 'Statement out';
+        sub = dayLabel(st.start) + ' – ' + dayLabel(st.end);
+      } else { tag = esc(c.type); sub = 'Calendar month'; }
+      if (tag.charAt(0) !== '<') tag = '<span class="t-tag">' + tag + '</span>';
+      if (c.limit) foot = ring(amt / c.limit);
+      h += '<button type="button" class="ctile" data-cardhist="' + c.id + '" style="background:linear-gradient(135deg,' + shade(c.color, -0.05) + ' 0%,' + shade(c.color, -0.5) + ' 100%);border:0;text-align:left">' +
+        '<div class="t-top"><span class="t-name">' + esc(c.name) + '</span>' + tag + '</div>' +
+        '<div class="t-amt">' + inr.format(amt) + '</div>' +
+        '<div class="t-foot"><div><div class="t-sub">' + sub + '</div>' +
+        (shared() && c.owner ? '<div class="owner">' + esc(c.owner === 'family' ? 'Joint' : personName(c.owner)) + '</div>' : '') +
+        (c.limit ? '<div class="t-sub">of ' + inr.format(+c.limit) + ' limit</div>' : '') + '</div>' + foot + '</div></button>';
     });
-    other.forEach(function (c) {
-      var amt = chargedOn(c.id, ym);
-      h += '<div class="cc"><div class="cc-head"><span class="swatch" style="background:' + c.color + '"></span><span class="cc-name">' + esc(c.name) + '</span><span class="pill">' + esc(c.type) + '</span></div>' +
-        '<div class="row"><b style="font-size:20px">' + inr.format(amt) + '</b><span class="small muted">Calendar month</span></div></div>';
-    });
-    h += '</section>';
+    h += '</div></section>';
   }
 
   // Categories
@@ -422,8 +557,8 @@ function viewHome() {
   if (!cats.length) h += '<p class="muted small" style="margin:0">No spending in this bill month yet. Tap + to log one.</p>';
   else {
     h += '<div class="donut-wrap">' + donut(cats, spent) + '<div class="legend">' + cats.map(function (c) {
-      var b = +S.budgets[c.name] || 0;
-      return '<div class="leg"><span class="swatch" style="background:' + c.color + '"></span><span class="nm">' + esc(c.name) + '</span><b>' + inr.format(c.value) + '</b>' +
+      var b = ui.who ? 0 : +S.budgets[c.name] || 0;
+      return '<div class="leg"><span class="swatch" style="background:' + c.color + '"></span><span class="nm">' + catIcon(c.name) + ' ' + esc(c.name) + '</span><b>' + inr.format(c.value) + '</b>' +
         (b ? meter(c.value, b) : '') + '</div>';
     }).join('') + '</div></div>';
   }
@@ -433,7 +568,7 @@ function viewHome() {
   var series = S.cards.map(function (c) { return { name: c.name, color: c.color }; });
   var cols = [];
   for (var i = -5; i <= 0; i++) {
-    var m = ymAdd(ym, i), list = expenses(inMonth(m));
+    var m = ymAdd(ym, i), list = expenses(scope(inMonth(m)));
     cols.push({ label: ymShort(m), strong: i === 0, values: S.cards.map(function (c) { return sum(list.filter(function (t) { return t.card === c.id; })); }) });
   }
   h += '<section class="card"><h2>Last 6 months by card</h2>' + stackedBars(cols, series) +
@@ -443,14 +578,14 @@ function viewHome() {
   var daily = [];
   for (var d = 1; d <= dim; d++) {
     var dd = new Date(+p[0], +p[1] - 1, d);
-    var v = sum(S.tx.filter(function (t) { if (t.kind !== 'Expense') return false; var x = parseLocal(t.date); return x.getFullYear() === dd.getFullYear() && x.getMonth() === dd.getMonth() && x.getDate() === d; }));
+    var v = sum(scope(S.tx).filter(function (t) { if (t.kind !== 'Expense') return false; var x = parseLocal(t.date); return x.getFullYear() === dd.getFullYear() && x.getMonth() === dd.getMonth() && x.getDate() === d; }));
     daily.push({ label: (d === 1 || d % 5 === 0) ? String(d) : '', values: [v], dim: dd > new Date() });
   }
   h += '<section class="card"><h2>Daily spend in ' + MON[+p[1] - 1] + ' (by date)</h2>' + stackedBars(daily, [{ name: 'Spent', color: 'var(--accent)' }], 160) + '</section>';
 
   // Not spending
   var tr = sum(month.filter(function (t) { return t.kind === 'Transfer'; }));
-  var lent = sum(S.tx.filter(function (t) { return t.kind === 'Lent'; })), back = sum(S.tx.filter(function (t) { return t.kind === 'Received'; }));
+  var lent = sum(scope(S.tx).filter(function (t) { return t.kind === 'Lent'; })), back = sum(scope(S.tx).filter(function (t) { return t.kind === 'Received'; }));
   if (tr || lent || back) {
     h += '<section class="card"><h2>Not counted as spending</h2>' +
       '<div class="kpis"><div class="kpi"><b>' + inr.format(tr) + '</b><span>Transfers this month</span></div>' +
@@ -460,6 +595,90 @@ function viewHome() {
   return h;
 }
 
+// ---------- Insights: where the money is going and where to cut back ----------
+// Compares this bill month with the person's usual (average of up to 3 earlier months), scaled to how far
+// into the month we are, so a half-finished month is compared with half a usual month.
+function viewInsights(ym) {
+  var now = ymOf(new Date());
+  if (ym > now) return '';
+  var cur = expenses(scope(inMonth(ym))), spent = sum(cur);
+  // A bill month spans from the earliest card cycle start (e.g. 23 Oct) to the end of the calendar month.
+  var p = ym.split('-'), start = new Date(+p[0], +p[1] - 1, 1), end = new Date(+p[0], +p[1], 0);
+  S.cards.forEach(function (c) { if (stmtDay(c)) { var st = statement(c, ym); if (st.start < start) start = st.start; if (st.end > end) end = st.end; } });
+  var span = Math.round((end - start) / 864e5) + 1, t0 = today0();
+  var isCur = ym === now, f = isCur ? Math.min(Math.max((Math.round((t0 - start) / 864e5) + 1) / span, 0), 1) : 1;
+  var dim = span, day = Math.round((t0 - start) / 864e5) + 1;
+  var prev = [1, 2, 3].map(function (i) { return expenses(scope(inMonth(ymAdd(ym, -i)))); }).filter(function (l) { return l.length; });
+  var last = sum(expenses(scope(inMonth(ymAdd(ym, -1)))));
+  var R = function (v) { return inr.format(v); }, r100 = function (v) { return Math.round(v / 100) * 100; };
+  var out = [];
+
+  // 1. Pace for the month. One-off and monthly bills (rent, EMI, a big purchase) are counted once, not scaled up.
+  if (isCur && f >= 0.15 && f < 0.97 && last > 0 && spent > 0) {
+    var once = sum(cur.filter(function (t) { return FIXED_CATS.indexOf(t.category) >= 0 || +t.amount >= last * 0.2; }));
+    var proj = once + (spent - once) / f, d = proj - last, left = Math.max(dim - day, 1);
+    if (Math.abs(d) >= Math.max(500, last * 0.05)) {
+      if (d > 0) out.push({ tone: 'bad', i: '📈', t: 'At this pace you\'ll spend about <b>' + R(r100(proj)) + '</b> this month, <b>' + R(r100(d)) + ' more</b> than last month.',
+        tip: last > spent ? 'Keep it under ' + R(Math.floor((last - spent) / left)) + ' a day for the rest of the month to match last month.' : 'You have already passed last month\'s total of ' + R(last) + '.' });
+      else out.push({ tone: 'good', i: '👍', t: 'On track for about <b>' + R(r100(proj)) + '</b>, <b>' + R(r100(-d)) + ' less</b> than last month.' });
+    }
+  }
+
+  // 2 & 4. Categories above / below the usual
+  if (prev.length) {
+    var byCat = function (list) { var m = {}; list.forEach(function (t) { var c = t.category || 'Other'; m[c] = (m[c] || 0) + (+t.amount || 0); }); return m; };
+    var now_ = byCat(cur), avg = {};
+    prev.forEach(function (l) { var m = byCat(l); Object.keys(m).forEach(function (k) { avg[k] = (avg[k] || 0) + m[k] / prev.length; }); });
+    var rows = Object.keys(Object.assign({}, now_, avg)).map(function (k) {
+      var base = (avg[k] || 0) * (FIXED_CATS.indexOf(k) >= 0 ? 1 : f), v = now_[k] || 0;   // monthly bills aren't spread over the month
+      return { k: k, v: v, base: base, d: v - base };
+    });
+    var up = rows.filter(function (x) { return x.d >= Math.max(500, x.base * 0.25); }).sort(function (a, b) { return b.d - a.d; })[0];
+    if (up) {
+      var top = topNotes(cur.filter(function (t) { return (t.category || 'Other') === up.k; }))[0];
+      out.push({ tone: 'bad', i: catIcon(up.k), t: '<b>' + esc(up.k) + '</b> is <b>' + R(r100(up.d) || up.d) + ' above</b> your usual' + (isCur ? ' for this point in the month' : '') +
+        (up.base >= 100 ? ' (+' + Math.round(up.d / up.base * 100) + '%)' : '') + '.', tip: top ? 'Most of it: ' + esc(top.name) + ' ' + R(top.v) + (top.n > 1 ? ' (' + top.n + ' times)' : '') + '.' : '' });
+    }
+    var down = (isCur && f < 0.5) ? null : rows.filter(function (x) { return x.base >= 500 && -x.d >= Math.max(500, x.base * 0.25) && !(isCur && FIXED_CATS.indexOf(x.k) >= 0); }).sort(function (a, b) { return a.d - b.d; })[0];
+    if (down) out.push({ tone: 'good', i: catIcon(down.k), t: '<b>' + esc(down.k) + '</b> is <b>' + R(r100(-down.d) || -down.d) + ' below</b> your usual. Nice.' });
+  }
+
+  // 3. Small spends that keep repeating
+  var rep_ = topNotes(cur).filter(function (x) { return x.n >= 3; })[0];
+  if (rep_) out.splice(Math.min(out.length, 2), 0, { tone: 'warn', i: '🔁', t: '<b>' + esc(rep_.name) + '</b>: ' + rep_.n + ' times, <b>' + R(rep_.v) + '</b>' + (isCur ? ' so far' : '') + '.',
+    tip: isCur && f < 0.9 ? 'Halving it would have saved ' + R(Math.round(rep_.v / 2)) + ' already this month.' : 'Halving it saves about ' + R(Math.round(rep_.v / 2)) + ' a month.' });
+
+  // 5. Biggest single spend
+  if (out.length < 4 && cur.length) {
+    var big = cur.slice().sort(function (a, b) { return b.amount - a.amount; })[0], bd = parseLocal(big.date);
+    out.push({ tone: '', i: catIcon(big.category), t: 'Biggest spend: <b>' + esc(big.note || big.category) + '</b> ' + R(+big.amount) + ' on ' + dayLabel(bd) +
+      (spent ? ' (' + Math.round(big.amount / spent * 100) + '% of the month)' : '') + '.' });
+  }
+  if (!out.length) return '';
+  return '<section class="card"><div class="row"><h2>Insights</h2>' + (prev.length ? '' : '<span class="small muted">Gets smarter after a month</span>') + '</div>' +
+    out.slice(0, 4).map(function (x) {
+      return '<div class="ins ' + x.tone + '"><span class="i" aria-hidden="true">' + x.i + '</span><p>' + x.t + (x.tip ? '<span class="tip">' + x.tip + '</span>' : '') + '</p></div>';
+    }).join('') + '</section>';
+}
+// Group entries by note (shop, app, person): [{name, n, v}] biggest first.
+function topNotes(list) {
+  var m = {};
+  list.forEach(function (t) {
+    var k = String(t.note || '').trim(); if (!k) return;
+    var e = m[k.toLowerCase()] || (m[k.toLowerCase()] = { name: k, n: 0, v: 0 });
+    e.n++; e.v += +t.amount || 0;
+  });
+  return Object.keys(m).map(function (k) { return m[k]; }).sort(function (a, b) { return b.v - a.v; });
+}
+
+// Small progress ring for a card's limit used (fraction 0..1+).
+function ring(f) {
+  var r = 19, c = 2 * Math.PI * r, used = Math.min(Math.max(f, 0), 1);
+  return '<svg class="ring" viewBox="0 0 46 46" aria-label="' + Math.round(f * 100) + '% of limit used"><circle cx="23" cy="23" r="' + r + '" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="4"/>' +
+    '<circle cx="23" cy="23" r="' + r + '" fill="none" stroke="' + (f >= 0.9 ? '#ffb4ab' : '#fff') + '" stroke-width="4" stroke-linecap="round" stroke-dasharray="' + (c * used).toFixed(1) + ' ' + c.toFixed(1) + '" transform="rotate(-90 23 23)"/>' +
+    '<text x="23" y="27" text-anchor="middle">' + Math.round(f * 100) + '%</text></svg>';
+}
+
 function meter(v, max) {
   var f = max ? v / max : 0;
   return '<div class="meter' + (f >= 1 ? ' bad' : f >= 0.8 ? ' warn' : '') + '"><i style="width:' + Math.min(f * 100, 100).toFixed(1) + '%"></i></div>';
@@ -467,14 +686,14 @@ function meter(v, max) {
 
 function viewHistory() {
   if (!S.cards.length) return viewHome();
-  var list = inMonth(ui.ym).filter(function (t) {
+  var list = scope(inMonth(ui.ym)).filter(function (t) {
     if (ui.cardFilter && t.card !== ui.cardFilter) return false;
     if (!ui.q) return true;
     var c = cardById(t.card);
-    return (t.note + ' ' + t.category + ' ' + t.kind + ' ' + (c ? c.name : '') + ' ' + t.amount).toLowerCase().indexOf(ui.q.toLowerCase()) >= 0;
+    return (t.note + ' ' + t.category + ' ' + t.kind + ' ' + (c ? c.name : '') + ' ' + personName(whoOf(t)) + ' ' + t.amount).toLowerCase().indexOf(ui.q.toLowerCase()) >= 0;
   }).sort(function (a, b) { return a.date < b.date ? 1 : -1; });
-  var h = sampleBanner() + '<section class="card"><div class="two"><input class="in" id="q" type="search" placeholder="Search note, amount…" value="' + esc(ui.q) + '">' +
-    '<select class="in" id="cardFilter"><option value="">All cards</option>' + S.cards.map(function (c) { return '<option value="' + c.id + '"' + (ui.cardFilter === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select></div>' +
+  var h = sampleBanner() + whoBar() + '<section class="card"><div class="two"><input class="in" id="q" type="search" placeholder="Search note, amount…" value="' + esc(ui.q) + '">' +
+    '<select class="in" id="cardFilter"><option value="">All cards</option>' + cardsSorted().map(function (c) { return '<option value="' + c.id + '"' + (ui.cardFilter === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select></div>' +
     '<div class="row small muted"><span>' + list.length + ' entries in ' + esc(ymLabel(ui.ym)) + ' bills</span><b>' + inr.format(sum(expenses(list))) + ' spent</b></div>';
   if (!list.length) return h + '<p class="muted small" style="margin:0">Nothing here. Credit card purchases show under the month their statement is made.</p></section>';
   var lastDay = '', out = '<div class="list">';
@@ -482,8 +701,8 @@ function viewHistory() {
     var d = parseLocal(t.date), key = d.toDateString();
     if (key !== lastDay) { out += '<div class="day">' + d.getDate() + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear() + '</div>'; lastDay = key; }
     var c = cardById(t.card), isExp = t.kind === 'Expense';
-    out += '<button type="button" class="tx" data-edit="' + t.id + '"><span class="ico" style="background:' + (isExp ? catColor(t.category) : '#7d8a99') + '">' + initials(isExp ? t.category : t.kind) + '</span>' +
-      '<div><div class="t1">' + esc(t.note || (isExp ? t.category : t.kind)) + '</div><div class="t2">' + esc((c ? c.name : 'Unknown card') + ' · ' + (isExp ? t.category : t.kind) + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes())) + '</div></div>' +
+    out += '<button type="button" class="tx" data-edit="' + t.id + '"><span class="ico" style="background:' + (isExp ? catColor(t.category) : '#7d8a99') + '2e" aria-hidden="true">' + txIcon(t) + '</span>' +
+      '<div><div class="t1">' + esc(t.note || (isExp ? t.category : t.kind)) + '</div><div class="t2">' + esc((shared() && whoOf(t) ? personName(whoOf(t)) + ' · ' : '') + (c ? c.name : 'Unknown card') + ' · ' + (isExp ? t.category : t.kind) + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes())) + '</div></div>' +
       '<div class="amt' + (isExp ? '' : ' other') + '">' + (t.kind === 'Received' ? '+' : '') + inr.format(+t.amount) + '</div></button>';
   });
   return h + out + '</div></section>';
@@ -497,7 +716,7 @@ function viewBills() {
     var dates = S.tx.filter(function (t) { return t.card === c.id; }).map(function (t) { return billMonth(t); });
     var open = billMonthFor(c, new Date());
     var first = dates.length ? dates.reduce(function (a, b) { return a < b ? a : b; }) : open;
-    h += '<section class="card"><div class="cc-head"><span class="swatch" style="background:' + c.color + '"></span><span class="cc-name">' + esc(c.name) + '</span><span class="small muted">Statement on ' + ordinal(c.stmtDay) + '</span></div>';
+    h += '<section class="card"><div class="cc-head"><span class="swatch" style="background:' + c.color + '"></span><span class="cc-name">' + esc(c.name) + '</span><span class="small muted">' + (shared() && c.owner ? esc(c.owner === 'family' ? 'Joint' : personName(c.owner)) + ' · ' : '') + 'Statement on ' + ordinal(c.stmtDay) + '</span></div>';
     for (var m = open; m >= first; m = ymAdd(m, -1)) {
       var st = statement(c, m), amt = chargedOn(c.id, m), key = c.id + '|' + m, paid = !!S.paid[key], isOpen = st.date > t0;
       var dueSoon = !paid && !isOpen && st.due && (st.due - t0) / 864e5 <= 3;
@@ -517,13 +736,29 @@ function viewSettings() {
   if (!S.cards.length) h += '<p class="muted small" style="margin:0">No cards yet.</p>';
   S.cards.forEach(function (c) {
     h += '<div class="set-row"><div class="cc-head" style="min-width:0"><span class="swatch" style="background:' + c.color + '"></span><div style="min-width:0"><div class="cc-name">' + esc(c.name) + '</div>' +
-      '<div class="small muted">' + esc(c.type) + (stmtDay(c) ? ' · statement ' + ordinal(c.stmtDay) + (c.dueDay ? ' · due ' + ordinal(c.dueDay) : c.dueDays ? ' · due +' + c.dueDays + ' days' : '') : '') + (c.limit ? ' · limit ' + inr.format(+c.limit) : '') + '</div></div></div>' +
+      '<div class="small muted">' + (shared() && c.owner ? esc(c.owner === 'family' ? 'Joint' : personName(c.owner)) + ' · ' : '') + esc(c.type) + (stmtDay(c) ? ' · statement ' + ordinal(c.stmtDay) + (c.dueDay ? ' · due ' + ordinal(c.dueDay) : c.dueDays ? ' · due +' + c.dueDays + ' days' : '') : '') + (c.limit ? ' · limit ' + inr.format(+c.limit) : '') + '</div></div></div>' +
       '<button type="button" class="linkish" data-card="' + c.id + '">Edit</button></div>';
   });
   h += '</section>';
 
-  h += '<section class="card"><h2>Monthly budgets</h2><p class="small muted" style="margin:0">Optional. Leave blank for no budget. Bars turn amber at 80% and red at 100%.</p><div class="budget-grid">' +
-    CATS.map(function (c, i) { return '<label for="b' + i + '" style="display:flex;gap:8px;align-items:center"><span class="swatch" style="background:' + CAT_COLORS[i] + '"></span>' + esc(c) + '</label>' +
+  h += '<section class="card"><div class="row"><h2>People</h2>' + (S.people.length ? '<button type="button" class="linkish" data-act="new-person">+ Add person</button>' : '') + '</div>';
+  if (!S.people.length) {
+    h += '<p class="small muted" style="margin:0">Tracking for the family? Add your name, then each family member who spends. Every entry gets tagged with who spent it (or Family), and you can filter by person. ' +
+      'Each person can log on their own phone into the same Google Sheet.</p><button type="button" class="btn ghost block" data-act="new-person">Add my name</button>';
+  } else {
+    S.people.forEach(function (p) {
+      h += '<div class="set-row"><div><div class="cc-name">' + esc(p.name) + (p.id === S.me ? ' <span class="pill">This phone</span>' : '') + '</div>' +
+        '<div class="small muted">' + S.tx.filter(function (t) { return whoOf(t) === p.id; }).length + ' entries</div></div>' +
+        '<button type="button" class="linkish" data-person="' + p.id + '">Edit</button></div>';
+    });
+    if (!personById(S.me)) h += '<button type="button" class="btn block" data-act="who">Who uses this phone?</button>';
+    else if (S.people.length > 1) h += '<button type="button" class="linkish" style="justify-self:start" data-act="who">Change who uses this phone</button>';
+    if (S.people.length === 1) h += '<p class="small muted" style="margin:0">Add a family member to start tagging who spent what.</p>';
+  }
+  h += '</section>';
+
+  h += '<section class="card"><h2>Monthly budgets</h2><p class="small muted" style="margin:0">Optional, for the whole household. Leave blank for no budget. Bars turn amber at 80% and red at 100%.</p><div class="budget-grid">' +
+    CATS.map(function (c, i) { return '<label for="b' + i + '" style="display:flex;gap:8px;align-items:center"><span aria-hidden="true">' + CAT_ICONS[i] + '</span>' + esc(c) + '</label>' +
       '<input class="in" id="b' + i + '" data-budget="' + esc(c) + '" inputmode="numeric" placeholder="₹" value="' + (S.budgets[c] || '') + '">'; }).join('') + '</div></section>';
 
   if (!syncOn()) {
@@ -538,7 +773,7 @@ function viewSettings() {
       '<div class="sync-line"><span class="sync-dot ' + st.tone + '"></span><span>' + esc(st.text) + '</span></div>' +
       '<div class="btns"><button type="button" class="btn ghost" data-act="sync-now">Sync now</button>' +
       (S.sync.sheetUrl ? '<a class="btn ghost" style="text-align:center;text-decoration:none" href="' + esc(S.sync.sheetUrl) + '" target="_blank" rel="noopener">Open sheet</a>' : '') + '</div>' +
-      '<button type="button" class="btn ghost block" data-act="pull">Restore from Google Sheet</button>' +
+      '<button type="button" class="btn ghost block" data-act="pull">Reload from Google Sheet</button>' +
       '<button type="button" class="linkish" style="justify-self:start" data-act="disconnect">Disconnect</button></section>';
   }
 
@@ -553,12 +788,34 @@ function bindView(v) {
   $$('[data-act]', v).forEach(function (b) { b.addEventListener('click', function () { actions[b.dataset.act](); }); });
   $$('[data-edit]', v).forEach(function (b) { b.addEventListener('click', function () { openExpense(S.tx.filter(function (t) { return t.id === b.dataset.edit; })[0]); }); });
   $$('[data-card]', v).forEach(function (b) { b.addEventListener('click', function () { openCard(cardById(b.dataset.card)); }); });
+  $$('[data-person]', v).forEach(function (b) { b.addEventListener('click', function () { openPerson(personById(b.dataset.person)); }); });
+  $$('[data-who]', v).forEach(function (b) { b.addEventListener('click', function () { ui.who = b.dataset.who; render(); }); });
+  $$('[data-cardhist]', v).forEach(function (b) { b.addEventListener('click', function () { ui.cardFilter = b.dataset.cardhist; ui.tab = 'history'; render(); window.scrollTo(0, 0); }); });
+  $$('[data-count]', v).forEach(countUp);
   $$('[data-paid]', v).forEach(function (b) { b.addEventListener('click', function () {
-    var k = b.dataset.paid; if (S.paid[k]) delete S.paid[k]; else S.paid[k] = toLocal(new Date()); queueMeta(); save(); render(); }); });
+    var k = b.dataset.paid; if (S.paid[k]) delete S.paid[k]; else S.paid[k] = toLocal(new Date()); queue('paid', k); save(); render(); }); });
   $$('[data-budget]', v).forEach(function (i) { i.addEventListener('change', function () {
-    var n = Math.round(+String(i.value).replace(/[^\d.]/g, '')); if (n > 0) S.budgets[i.dataset.budget] = n; else delete S.budgets[i.dataset.budget]; i.value = S.budgets[i.dataset.budget] || ''; queueMeta(); save(); toast('Budget saved'); }); });
+    var n = Math.round(+String(i.value).replace(/[^\d.]/g, '')); if (n > 0) S.budgets[i.dataset.budget] = n; else delete S.budgets[i.dataset.budget]; i.value = S.budgets[i.dataset.budget] || ''; queue('budget', i.dataset.budget); save(); toast('Budget saved'); }); });
   var q = $('#q', v); if (q) q.addEventListener('input', function () { ui.q = q.value; var pos = q.selectionStart; render(); var n = $('#q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} });
   var cf = $('#cardFilter', v); if (cf) cf.addEventListener('change', function () { ui.cardFilter = cf.value; render(); });
+}
+
+// The big total counts up when it changes (not on every redraw).
+var shownTotal = {};
+function countUp(el) {
+  var to = +el.dataset.count, key = ui.ym + '|' + ui.who, from = shownTotal[key];
+  shownTotal[key] = to;
+  if (from === to || !window.requestAnimationFrame || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  from = from || 0;
+  var t0 = null, dur = 600;
+  var step = function (ts) {
+    if (!el.isConnected) return;
+    t0 = t0 || ts;
+    var k = Math.min((ts - t0) / dur, 1), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = inr.format(from + (to - from) * e);
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 $$('nav.tabs [data-tab]').forEach(function (b) { b.addEventListener('click', function () { ui.tab = b.dataset.tab; render(); window.scrollTo(0, 0); }); });
@@ -576,28 +833,54 @@ function openSheet(html, mount) {
   mount($('.sheet', root));
 }
 function escClose(e) { if (e.key === 'Escape') closeSheet(); }
-function closeSheet() { $('#sheetRoot').innerHTML = ''; document.removeEventListener('keydown', escClose); }
+function closeSheet() { $('#sheetRoot').innerHTML = ''; document.removeEventListener('keydown', escClose); if (staleView) { staleView = false; render(); } }
+
+// Entries this phone logs often (same note, card, kind and category), newest amount first.
+function quickPicks() {
+  var since = toLocal(addDays(today0(), -120)), m = {};
+  S.tx.forEach(function (t) {
+    if (t.date < since || !cardById(t.card)) return;
+    if (shared() && t.by && t.by !== S.me) return;
+    var key = [t.kind, t.category, String(t.note || '').trim().toLowerCase(), t.card].join('|');
+    var e = m[key] || (m[key] = { n: 0, last: null });
+    e.n++; if (!e.last || t.date > e.last.date) e.last = t;
+  });
+  return Object.keys(m).map(function (k) { return m[k]; }).filter(function (e) { return e.n >= 2; })
+    .sort(function (a, b) { return b.n - a.n || (a.last.date < b.last.date ? 1 : -1); }).slice(0, 6).map(function (e) { return e.last; });
+}
 
 function openExpense(t, prefill) {
   if (!S.cards.length) { toast('Add a card first'); openCard(); return; }
   var edit = !!t;
   prefill = prefill || {};
-  t = t ? Object.assign({}, t) : { id: uid(), date: toLocal(new Date()), card: (cardById(S.lastCard) || S.cards[0]).id, amount: '', kind: 'Expense', category: '', note: '' };
+  var cards = cardsSorted();
+  t = t ? Object.assign({}, t) : { id: uid(), date: toLocal(new Date()), card: (cardById(S.lastCard) || cards[0]).id, amount: '', kind: 'Expense', category: '', note: '',
+                                    for: personById(S.me) ? S.me : '', by: personById(S.me) ? S.me : '' };
+  if (shared() && !t.for) t.for = whoOf(t) || S.me;
   if (prefill.amount) t.amount = prefill.amount;
   if (prefill.card) t.card = prefill.card;
   if (prefill.category) t.category = prefill.category;
   if (prefill.kind) t.kind = prefill.kind;
   if (prefill.note) t.note = prefill.note;
+  if (prefill.for) t.for = prefill.for;
+  var whoTouched = edit || !!prefill.for;
+  var picks = edit || prefill.amount ? [] : quickPicks();
   var html = '<div class="row"><h3>' + (edit ? 'Edit entry' : 'Log a payment') + '</h3><button type="button" class="linkish" id="xClose">Cancel</button></div>' +
+    (picks.length ? '<div class="quick" id="fQuick" aria-label="Quick add">' + picks.map(function (q, i) {
+      var c = cardById(q.card);
+      return '<button type="button" data-q="' + i + '"><b>' + txIcon(q) + ' ' + esc(q.note || (q.kind === 'Expense' ? q.category : q.kind)) + '</b><span>' + inr.format(+q.amount) + ' · ' + esc(c.name) + '</span></button>';
+    }).join('') + '</div>' : '') +
     '<div class="amount-wrap"><span>₹</span><input class="amount-in" id="fAmt" inputmode="decimal" placeholder="0" value="' + esc(t.amount) + '" aria-label="Amount in rupees" autocomplete="off"></div>' +
     '<div class="f" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Paid with</span><div class="chips" id="fCards">' +
-    S.cards.map(function (c) { return '<button type="button" class="chip" data-v="' + c.id + '" aria-pressed="' + (t.card === c.id) + '"><span class="swatch" style="background:' + c.color + '"></span>' + esc(c.name) + '</button>'; }).join('') + '</div></div>' +
+    cards.map(function (c) { return '<button type="button" class="chip" data-v="' + c.id + '" aria-pressed="' + (t.card === c.id) + '"><span class="swatch" style="background:' + c.color + '"></span>' + esc(c.name) + '</button>'; }).join('') + '</div></div>' +
+    (shared() ? '<div class="f" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Spent by</span>' + choices('fWho', whoChoices(), t.for) + '</div>' : '') +
     '<div class="seg" id="fKind">' + KINDS.map(function (k) { return '<button type="button" data-v="' + k + '" aria-pressed="' + (t.kind === k) + '">' + k + '</button>'; }).join('') + '</div>' +
     '<div id="fCatWrap" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Category</span><div class="chips" id="fCats">' +
-    CATS.map(function (c, i) { return '<button type="button" class="chip" data-v="' + esc(c) + '" aria-pressed="' + (t.category === c) + '"><span class="swatch" style="background:' + CAT_COLORS[i] + '"></span>' + esc(c) + '</button>'; }).join('') + '</div></div>' +
+    CATS.map(function (c, i) { return '<button type="button" class="chip" data-v="' + esc(c) + '" aria-pressed="' + (t.category === c) + '"><span class="em" aria-hidden="true">' + CAT_ICONS[i] + '</span>' + esc(c) + '</button>'; }).join('') + '</div></div>' +
     '<label class="f" for="fNote">Note <span class="hint">(shop, person, item; optional)</span><input class="in" id="fNote" value="' + esc(t.note) + '" autocomplete="off"></label>' +
     '<label class="f" for="fDate">When<input class="in" id="fDate" type="datetime-local" value="' + esc(t.date) + '"></label>' +
     '<div class="small muted" id="fCycle"></div>' +
+    (edit && shared() && t.by && personName(t.by) ? '<div class="small muted">Logged by ' + esc(personName(t.by)) + '</div>' : '') +
     '<button type="button" class="btn block" id="fSave">' + (edit ? 'Save changes' : 'Save') + '</button>' +
     (edit ? '<button type="button" class="btn danger block" id="fDel">Delete entry</button>' : '');
   openSheet(html, function (sh) {
@@ -615,7 +898,22 @@ function openExpense(t, prefill) {
       $('#fCycle', sh).textContent = stmtDay(c) ? 'Goes on the ' + ymLabel(bm) + ' statement (' + dayLabel(statement(c, bm).start) + ' – ' + dayLabel(statement(c, bm).end) + ')' : 'Counts in ' + ymLabel(bm);
     };
     var kindUi = function () { $('#fCatWrap', sh).hidden = t.kind !== 'Expense'; };
-    pick($('#fCards', sh), 'card', cycleNote); pick($('#fKind', sh), 'kind', kindUi); pick($('#fCats', sh), 'category');
+    var setWho = function (id) { t.for = id; $$('#fWho button', sh).forEach(function (x) { x.setAttribute('aria-pressed', String(x.dataset.v === id)); }); };
+    // Until "Spent by" is tapped, household categories (groceries, rent, bills…) default to Family.
+    var catPicked = function () { if (shared() && !whoTouched) setWho(SHARED_CATS.indexOf(t.category) >= 0 ? 'family' : (personById(S.me) ? S.me : t.for)); };
+    pick($('#fCards', sh), 'card', cycleNote); pick($('#fKind', sh), 'kind', kindUi); pick($('#fCats', sh), 'category', catPicked);
+    if (shared()) pick($('#fWho', sh), 'for', function () { whoTouched = true; });
+    // Quick add: one tap fills everything from a frequent entry; the amount stays selected to edit.
+    $$('#fQuick button', sh).forEach(function (b) { b.addEventListener('click', function () {
+      var q = picks[+b.dataset.q];
+      var press = function (wrap, v) { var x = $$(wrap + ' button', sh).filter(function (y) { return y.dataset.v === v; })[0]; if (x) x.click(); };
+      press('#fCards', q.card); press('#fKind', q.kind);
+      if (q.kind === 'Expense') press('#fCats', q.category);
+      if (shared() && q.for) { press('#fWho', q.for); }
+      $('#fNote', sh).value = q.note || '';
+      amt.value = q.amount; amt.focus(); try { amt.select(); } catch (e) {}
+      $$('#fQuick button', sh).forEach(function (x) { x.classList.toggle('on', x === b); });
+    }); });
     kindUi(); cycleNote();
     $('#fDate', sh).addEventListener('change', cycleNote);
     $('#xClose', sh).addEventListener('click', closeSheet);
@@ -662,12 +960,15 @@ function guessCategory(text) {
 
 function openCard(c) {
   var edit = !!c;
-  c = c ? Object.assign({}, c) : { id: uid(), name: '', type: 'Credit', stmtDay: '', dueDay: '', dueDays: '', limit: '', color: CARD_COLORS[S.cards.length % CARD_COLORS.length] };
+  c = c ? Object.assign({}, c) : { id: uid(), name: '', type: 'Credit', stmtDay: '', dueDay: '', dueDays: '', limit: '', color: CARD_COLORS[S.cards.length % CARD_COLORS.length],
+                                    owner: personById(S.me) ? S.me : '' };
   var used = S.tx.filter(function (t) { return t.card === c.id; }).length;
   var before = JSON.stringify([c.name, c.type, c.stmtDay]);
   var html = '<div class="row"><h3>' + (edit ? 'Edit card' : 'Add a card') + '</h3><button type="button" class="linkish" id="xClose">Cancel</button></div>' +
     '<label class="f" for="cName">Name <span class="hint">(any name you\'ll recognise)</span><input class="in" id="cName" value="' + esc(c.name) + '" autocomplete="off"></label>' +
     '<div class="seg" id="cType">' + CARD_TYPES.map(function (k) { return '<button type="button" data-v="' + k + '" aria-pressed="' + (c.type === k) + '">' + k + '</button>'; }).join('') + '</div>' +
+    (shared() ? '<div class="f" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Belongs to <span class="hint">(whose bill it is)</span></span>' +
+      choices('cOwner', whoChoices().map(function (p) { return { id: p.id, name: p.id === 'family' ? 'Joint' : p.name }; }), c.owner) + '</div>' : '') +
     '<div id="cCredit" style="display:grid;gap:12px">' +
     '<div class="f" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Statement day <span class="hint">(the "Statement date" on your bill)</span></span>' +
     '<button type="button" class="in daybtn" id="cStmtBtn" aria-expanded="false" aria-controls="cStmtGrid"></button>' + dayGrid('cStmtGrid', 28) + '</div>' +
@@ -708,6 +1009,7 @@ function openCard(c) {
     wirePicker('cDueBtn', 'cDueGrid', 'dueDay');
     dayUi();
     $$('#cType button', sh).forEach(function (b) { b.addEventListener('click', function () { $$('#cType button', sh).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); c.type = b.dataset.v; typeUi(); }); });
+    $$('#cOwner button', sh).forEach(function (b) { b.addEventListener('click', function () { $$('#cOwner button', sh).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); c.owner = b.dataset.v; }); });
     $$('#cColor button', sh).forEach(function (b) { b.addEventListener('click', function () { $$('#cColor button', sh).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); c.color = b.dataset.v; }); });
     typeUi();
     if (!edit) setTimeout(function () { $('#cName', sh).focus(); }, 60);
@@ -723,8 +1025,9 @@ function openCard(c) {
       var i = S.cards.map(function (x) { return x.id; }).indexOf(c.id);
       if (i >= 0) S.cards[i] = c; else S.cards.push(c);
       if (!S.lastCard) S.lastCard = c.id;
-      // Name, type or statement day changes move entries between bill months, so resend everything.
-      queueMeta(edit && used > 0 && JSON.stringify([c.name, c.type, c.stmtDay]) !== before);
+      queue('card', c.id);
+      // Name, type or statement day changes move entries between bill months, so resend this card's entries.
+      if (edit && used > 0 && JSON.stringify([c.name, c.type, c.stmtDay]) !== before) S.tx.forEach(function (t) { if (t.card === c.id) queue('tx', t.id); });
       clearBm(); save(); closeSheet(); render(); toast(edit ? 'Card saved' : c.name + ' added');
     });
     if (edit) $('#cDel', sh).addEventListener('click', function () {
@@ -732,10 +1035,87 @@ function openCard(c) {
       if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Tap again to delete' + (used ? ' card and ' + used + ' entries' : ''); return; }
       S.cards = S.cards.filter(function (x) { return x.id !== c.id; });
       S.tx = S.tx.filter(function (t) { if (t.card === c.id) { queueDel(t.id); return false; } return true; });
-      Object.keys(S.paid).forEach(function (k) { if (k.indexOf(c.id + '|') === 0) delete S.paid[k]; });
+      Object.keys(S.paid).forEach(function (k) { if (k.indexOf(c.id + '|') === 0) { delete S.paid[k]; queue('paid', k); } });
       if (S.lastCard === c.id) S.lastCard = S.cards[0] ? S.cards[0].id : null;
-      queueMeta();
+      queue('card', c.id);
       save(); closeSheet(); render(); toast('Card deleted');
+    });
+  });
+}
+
+// ---------- People forms ----------
+function openPerson(p) {
+  var edit = !!p, first = !S.people.length;
+  p = p ? Object.assign({}, p) : { id: uid(), name: '' };
+  var used = S.tx.filter(function (t) { return t.for === p.id || t.by === p.id; }).length + S.cards.filter(function (c) { return c.owner === p.id; }).length;
+  var html = '<div class="row"><h3>' + (edit ? 'Edit person' : first ? 'Your name' : 'Add a person') + '</h3><button type="button" class="linkish" id="xClose">Cancel</button></div>' +
+    (first ? '<p class="small muted" style="margin:0">Your existing cards and entries will be tagged as yours. Add family members next.</p>' : '') +
+    '<label class="f" for="pName">Name<input class="in" id="pName" value="' + esc(p.name) + '" autocomplete="off" maxlength="20"></label>' +
+    '<button type="button" class="btn block" id="pSave">Save</button>' +
+    (edit ? '<button type="button" class="btn danger block" id="pDel">Remove ' + esc(p.name) + '</button>' : '');
+  openSheet(html, function (sh) {
+    $('#xClose', sh).addEventListener('click', closeSheet);
+    setTimeout(function () { $('#pName', sh).focus(); }, 60);
+    $('#pSave', sh).addEventListener('click', function () {
+      var name = $('#pName', sh).value.trim(), old = p.name;
+      if (!name) { toast('Type a name'); return; }
+      if (/^(family|joint)$/i.test(name) || S.people.some(function (x) { return x.id !== p.id && x.name.toLowerCase() === name.toLowerCase(); })) { toast('Pick a different name'); return; }
+      p.name = name;
+      var i = S.people.map(function (x) { return x.id; }).indexOf(p.id);
+      if (i >= 0) S.people[i] = p; else S.people.push(p);
+      queue('person', p.id);
+      if (first) {
+        // First person = this phone's user; everything logged so far is theirs.
+        S.me = p.id;
+        S.cards.forEach(function (c) { if (!c.owner) { c.owner = p.id; queue('card', c.id); } });
+        S.tx.forEach(function (t) { if (!t.for) { t.for = p.id; t.by = t.by || p.id; queue('tx', t.id); } });
+      } else if (edit && old !== name) {
+        // The sheet stores names, so rewrite rows that mention this person.
+        S.cards.forEach(function (c) { if (c.owner === p.id) queue('card', c.id); });
+        S.tx.forEach(function (t) { if (t.for === p.id || t.by === p.id) queue('tx', t.id); });
+      }
+      save(); closeSheet(); render();
+      toast(edit ? 'Saved' : first ? 'Hi ' + name + '! Now add a family member.' : name + ' added. Entries can now be tagged per person.');
+    });
+    if (edit) $('#pDel', sh).addEventListener('click', function () {
+      if (used) { toast(p.name + ' has ' + used + ' entries or cards. Rename instead, or change those first.'); return; }
+      S.people = S.people.filter(function (x) { return x.id !== p.id; });
+      if (S.me === p.id) S.me = '';
+      if (ui.who === p.id) ui.who = '';
+      queue('person', p.id); save(); closeSheet(); render(); toast('Removed');
+    });
+  });
+}
+
+// "Who uses this phone?" Pick a person from the household, or add yourself.
+// mine: { tx: [ids], cards: [ids] } logged on this phone before it joined the sheet; untagged ones become this person's.
+function openWho(after, mine) {
+  var html = '<h3>Who uses this phone?</h3><p class="small muted" style="margin:0">New entries from this phone are tagged with this name. Your cards are listed first.</p>' +
+    '<div class="chips" id="wList">' + S.people.map(function (p) { return '<button type="button" class="chip" data-v="' + p.id + '" aria-pressed="' + (S.me === p.id) + '">' + esc(p.name) + '</button>'; }).join('') + '</div>' +
+    '<label class="f" for="wNew">Not listed? Type your name<input class="in" id="wNew" autocomplete="off" maxlength="20"></label>' +
+    '<button type="button" class="btn block" id="wSave">Done</button>';
+  openSheet(html, function (sh) {
+    var pickId = S.me;
+    $$('#wList button', sh).forEach(function (b) { b.addEventListener('click', function () {
+      $$('#wList button', sh).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); pickId = b.dataset.v; $('#wNew', sh).value = ''; }); });
+    $('#wSave', sh).addEventListener('click', function () {
+      var name = $('#wNew', sh).value.trim();
+      if (name) {
+        var same = S.people.filter(function (x) { return x.name.toLowerCase() === name.toLowerCase(); })[0];
+        if (same) pickId = same.id;
+        else if (/^(family|joint)$/i.test(name)) { toast('Pick a different name'); return; }
+        else { var np = { id: uid(), name: name }; S.people.push(np); queue('person', np.id); pickId = np.id; }
+      }
+      if (!personById(pickId)) { toast('Pick your name or type it'); return; }
+      S.me = pickId;
+      if (mine) {
+        S.cards.forEach(function (c) { if (!c.owner && mine.cards.indexOf(c.id) >= 0) { c.owner = pickId; queue('card', c.id); } });
+        S.tx.forEach(function (t) { if (!t.for && mine.tx.indexOf(t.id) >= 0) { t.for = pickId; t.by = t.by || pickId; queue('tx', t.id); } });
+      }
+      var first = cardsSorted()[0];
+      if (first && first.owner === S.me) S.lastCard = first.id;
+      save(); closeSheet(); render(); toast('This phone logs as ' + personName(S.me));
+      if (after) after();
     });
   });
 }
@@ -743,14 +1123,16 @@ function openCard(c) {
 // ---------- Actions ----------
 var actions = {
   'new-card': function () { openCard(); },
+  'new-person': function () { openPerson(); },
+  who: function () { openWho(); },
   sample: function () { loadSample(); },
-  'clear-sample': function () { S = keepSync(blank()); save(); render(); toast('Sample cleared. Add your first card.'); },
+  'clear-sample': function () { S = keepSync(blank()); save(); render(); toast(syncOn() ? 'Sample cleared. Loading your sheet…' : 'Sample cleared. Add your first card.'); scheduleSync(200); },
   reset: function () {
     openSheet('<h3>Delete everything on this phone?</h3><p class="muted" style="margin:0">This removes all ' + S.tx.length + ' entries and ' + S.cards.length + ' cards from this phone. ' +
-      (syncOn() ? 'Your Google Sheet is not changed, and you can bring everything back with Restore from Google Sheet.' : 'It cannot be undone.') + '</p>' +
+      (syncOn() ? 'It also disconnects the Google Sheet. The sheet is not changed: connect again to bring everything back.' : 'It cannot be undone.') + '</p>' +
       '<button type="button" class="btn danger block" id="rYes">Delete from this phone</button><button type="button" class="btn ghost block" id="rNo">Keep my data</button>', function (sh) {
       $('#rNo', sh).addEventListener('click', closeSheet);
-      $('#rYes', sh).addEventListener('click', function () { S = keepSync(blank()); save(); closeSheet(); ui.tab = 'home'; render(); toast('Deleted from this phone'); });
+      $('#rYes', sh).addEventListener('click', function () { S = blank(); save(); closeSheet(); ui.tab = 'home'; ui.who = ''; render(); syncStatusChanged(); toast('Deleted from this phone'); });
     });
   },
   connect: function () { openConnect(); },
@@ -767,28 +1149,53 @@ var actions = {
 };
 
 // ---------- Google Sheet sync ----------
-// The phone is the source of truth. Every change is queued (by entry id) and sent to the person's own
-// Google Sheet (Apps Script web app). Queued changes survive restarts and go out when the phone is online.
-function keepSync(fresh) { fresh.sync = Object.assign(blank().sync, S.sync, { ops: [], meta: true, full: false }); return fresh; }
+// The Google Sheet is the household's shared book; each phone keeps a full copy and works offline.
+// Every change is queued as {k, id} (k = tx | card | person | budget | paid) and sent with its current value
+// (null = deleted). Each sync sends the queue, then takes the sheet's copy back, so entries logged on the other
+// phone show up here. Changes still waiting on this phone win over the sheet's copy.
+function keepSync(fresh) {
+  fresh.me = S.me;
+  fresh.sync = Object.assign(blank().sync, { url: S.sync.url, key: S.sync.key, sheetUrl: S.sync.sheetUrl });
+  return fresh;
+}
 function syncOn() { return !!(S.sync && S.sync.url && !S.sample); }
-function pendingCount() { return syncOn() ? S.sync.ops.length + (S.sync.full ? S.tx.length : 0) + (S.sync.meta && !S.sync.ops.length && !S.sync.full ? 1 : 0) : 0; }
+function pendingCount() { return syncOn() ? S.sync.ops.length : 0; }
 function txById(id) { for (var i = 0; i < S.tx.length; i++) if (S.tx[i].id === id) return S.tx[i]; return null; }
 
-function queueTx(id) { queueOp({ op: 'upsert', id: id }); }
-function queueDel(id) { queueOp({ op: 'delete', id: id }); }
-function queueOp(o) {
+function queue(k, id) {
   if (!syncOn()) return;
-  S.sync.ops = S.sync.ops.filter(function (x) { return x.id !== o.id; });
-  S.sync.ops.push(o);
+  S.sync.ops = S.sync.ops.filter(function (o) { return !(o.k === k && o.id === id); });
+  S.sync.ops.push({ k: k, id: id });
   scheduleSync();
 }
-// Cards, budgets or paid bills changed. `full` = bill months may have moved (statement day, type or name changed).
-function queueMeta(full) { if (!syncOn()) return; S.sync.meta = true; if (full) S.sync.full = true; scheduleSync(); }
+function queueTx(id) { queue('tx', id); }
+function queueDel(id) { queue('tx', id); }
+function queueAll() {
+  S.people.forEach(function (p) { queue('person', p.id); });
+  S.cards.forEach(function (c) { queue('card', c.id); });
+  Object.keys(S.budgets).forEach(function (k) { queue('budget', k); });
+  Object.keys(S.paid).forEach(function (k) { queue('paid', k); });
+  S.tx.forEach(function (t) { queue('tx', t.id); });
+}
 
+// The sheet stores names (readable); it maps them back to ids when the phones read it.
 function txPayload(t) {
   var c = cardById(t.card), bm = billMonth(t), st = c && stmtDay(c) ? statement(c, bm) : null;
   return { id: t.id, date: t.date, card: c ? c.name : '', cardId: t.card, amount: +t.amount, kind: t.kind, category: t.category || '',
-           note: t.note || '', billMonth: bm, cycle: st ? dayLabel(st.start) + ' – ' + dayLabel(st.end) : 'Calendar month' };
+           note: t.note || '', billMonth: bm, cycle: st ? dayLabel(st.start) + ' – ' + dayLabel(st.end) : 'Calendar month',
+           for: personName(whoOf(t)), by: personName(t.by) };
+}
+function cardPayload(c) {
+  return { id: c.id, name: c.name, type: c.type, stmtDay: c.stmtDay || '', dueDay: c.dueDay || '', limit: c.limit || '', color: c.color || '',
+           owner: c.owner === 'family' ? 'Joint' : personName(c.owner) };
+}
+function opPayload(o) {
+  var v;
+  if (o.k === 'tx') { v = txById(o.id); return { k: 'tx', id: o.id, tx: v ? txPayload(v) : null }; }
+  if (o.k === 'card') { v = cardById(o.id); return { k: 'card', id: o.id, card: v ? cardPayload(v) : null }; }
+  if (o.k === 'person') { v = personById(o.id); return { k: 'person', id: o.id, person: v ? { id: v.id, name: v.name } : null }; }
+  if (o.k === 'budget') return { k: 'budget', id: o.id, v: S.budgets[o.id] || null };
+  return { k: 'paid', id: o.id, v: S.paid[o.id] || null };
 }
 
 function api(body, conn) {
@@ -799,42 +1206,83 @@ function api(body, conn) {
     .then(function (text) {
       var j;
       try { j = JSON.parse(text); } catch (e) { throw new Error('The sheet didn\'t answer. Check that the script is deployed as a Web app with access "Anyone".'); }
-      if (!j.ok) throw new Error(j.error === 'bad-key' ? 'The connection link is not valid any more. Get a new one from the sheet.' : 'Sheet error: ' + j.error);
+      if (!j.ok) {
+        if (j.error === 'bad-key') throw new Error('The connection link is not valid any more. Get a new one from the sheet.');
+        if (j.error === 'unknown-action') throw new Error('Your sheet\'s script is older than the app. Paste the new Code.gs into the sheet and deploy a new version (see the guide).');
+        throw new Error('Sheet error: ' + j.error);
+      }
       return j;
     }, function () { throw new Error(navigator.onLine ? 'Could not reach Google. Check the connection link.' : 'You are offline.'); });
 }
 
-var syncing = false, syncTimer = null;
+// Replace this phone's copy with the sheet's, keeping changes that are still waiting to be sent.
+function applySnapshot(j) {
+  var pend = {};
+  S.sync.ops.forEach(function (o) { pend[o.k + '|' + o.id] = 1; });
+  var merge = function (k, remote, local) {
+    var out = remote.filter(function (x) { return !pend[k + '|' + x.id]; });
+    local.forEach(function (x) { if (pend[k + '|' + x.id]) out.push(x); });
+    return out;
+  };
+  var srvBm = {};
+  S.people = merge('person', (j.people || []).map(function (p) { return { id: String(p.id), name: String(p.name) }; }), S.people);
+  S.cards = merge('card', (j.cards || []).map(function (c, i) {
+    var old = cardById(c.id);
+    return { id: c.id, name: c.name, type: CARD_TYPES.indexOf(c.type) >= 0 ? c.type : 'Debit', stmtDay: +c.stmtDay || '', dueDay: +c.dueDay || '',
+             dueDays: '', limit: +c.limit || '', color: c.color || (old && old.color) || CARD_COLORS[i % CARD_COLORS.length], owner: c.owner || '' };
+  }), S.cards);
+  S.tx = merge('tx', (j.tx || []).map(function (t) {
+    srvBm[t.id] = t.billMonth || '';
+    return { id: t.id, date: t.date, card: t.card, amount: +t.amount, kind: KINDS.indexOf(t.kind) >= 0 ? t.kind : 'Expense',
+             category: t.category || '', note: t.note || '', for: t.for || '', by: t.by || '' };
+  }), S.tx);
+  ['budget', 'paid'].forEach(function (k) {
+    var f = k === 'budget' ? 'budgets' : 'paid', r = Object.assign({}, j[f] || {});
+    Object.keys(pend).forEach(function (key) {
+      if (key.indexOf(k + '|') !== 0) return;
+      var id = key.slice(k.length + 1);
+      if (S[f][id]) r[id] = S[f][id]; else delete r[id];
+    });
+    S[f] = r;
+  });
+  if (!cardById(S.lastCard)) S.lastCard = S.cards.length ? cardsSorted()[0].id : null;
+  clearBm();
+  // Rows the sheet holds without this app's bill month (e.g. imported old rows) get it written back once.
+  S.tx.forEach(function (t) { if (t.id in srvBm && srvBm[t.id] !== billMonth(t) && cardById(t.card)) queue('tx', t.id); });
+}
+
+var syncing = false, syncTimer = null, lastPull = 0, staleView = false;
 function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(function () { syncNow(false); }, ms == null ? 800 : ms); }
 
 function syncNow(manual) {
   if (!syncOn() || syncing) return Promise.resolve();
-  var sy = S.sync;
-  if (!sy.ops.length && !sy.meta && !sy.full) { if (manual) toast('Everything is already in your sheet'); return Promise.resolve(); }
-  if (navigator.onLine === false) { syncStatusChanged(); return Promise.resolve(); }
+  if (navigator.onLine === false) { syncStatusChanged(); if (manual) toast('You are offline. Changes will be sent when you are back online.'); return Promise.resolve(); }
+  var sy = S.sync, sent = sy.ops.slice();
   syncing = true; syncStatusChanged();
-  var sent = sy.ops.slice(), wasFull = sy.full, wasMeta = sy.meta;
-  var body = { action: 'push' };
-  if (wasFull) { body.full = true; body.tx = S.tx.map(txPayload); }
-  else body.ops = sent.map(function (o) {
-    if (o.op === 'delete') return { op: 'delete', id: o.id };
-    var t = txById(o.id); return t ? { op: 'upsert', tx: txPayload(t) } : { op: 'delete', id: o.id };
-  });
-  if (wasFull || wasMeta) { body.cards = S.cards; body.budgets = S.budgets; body.paid = S.paid; }
-  sy.full = false; sy.meta = false;
-  return api(body).then(function (j) {
-    // Drop what was sent; anything queued while the request was in flight stays for the next round.
+  return api({ action: 'sync', rev: sy.rev || '', ops: sent.map(opPayload) }).then(function (j) {
+    if (S.sync !== sy) return;   // disconnected or wiped while the request was out
     sy.ops = sy.ops.filter(function (o) { return sent.indexOf(o) < 0; });
-    sy.last = toLocal(new Date()); sy.error = ''; if (j.sheetUrl) sy.sheetUrl = j.sheetUrl;
+    if (!j.same) applySnapshot(j);
+    sy.rev = j.rev || ''; sy.last = toLocal(new Date()); sy.error = ''; if (j.sheetUrl) sy.sheetUrl = j.sheetUrl;
+    lastPull = Date.now();
     save();
-    if (manual) toast('Synced to Google Sheet');
+    if (!j.same) refreshView();
+    if (manual) toast('Synced with Google Sheet');
   }, function (e) {
-    sy.full = sy.full || wasFull; sy.meta = sy.meta || wasMeta; sy.error = e.message; save();
+    if (S.sync !== sy) return;
+    sy.error = e.message; save();
     if (manual) toast(e.message);
   }).then(function () {
     syncing = false; syncStatusChanged();
-    if (!sy.error && (sy.ops.length || sy.meta || sy.full)) scheduleSync(1500);
+    if (S.sync === sy && !sy.error && sy.ops.length) scheduleSync(1500);
   });
+}
+
+// Redraw after the other phone's changes arrive, without yanking an open form or a field being typed in.
+function refreshView() {
+  var a = document.activeElement;
+  if ($('#sheetRoot').innerHTML || (a && a.tagName === 'INPUT' && $('#view').contains(a))) { staleView = true; return; }
+  staleView = false; render();
 }
 
 function syncStatusChanged() {
@@ -851,8 +1299,8 @@ function syncStatusChanged() {
 function syncState() {
   if (!syncOn()) return { tone: '', text: 'Not connected' };
   var n = pendingCount(), sy = S.sync;
-  if (syncing) return { tone: 'busy', text: 'Sending to Google Sheet…' };
-  if (sy.error && n) return { tone: 'bad', text: sy.error };
+  if (syncing) return { tone: 'busy', text: 'Syncing with Google Sheet…' };
+  if (sy.error) return { tone: 'bad', text: sy.error };
   if (n) return { tone: 'wait', text: n + (n === 1 ? ' change' : ' changes') + ' waiting' + (navigator.onLine === false ? ': will send when you are online' : '') };
   return { tone: 'ok', text: 'Everything synced' + (sy.last ? ' · last at ' + sy.last.slice(11) + ' on ' + dayLabel(parseLocal(sy.last)) : '') };
 }
@@ -864,7 +1312,8 @@ function parseConnLink(s) {
 
 function openConnect() {
   var html = '<div class="row"><h3>Connect Google Sheet</h3><button type="button" class="linkish" id="xClose">Cancel</button></div>' +
-    '<p class="small muted" style="margin:0">In your copy of the Selavu sheet choose <b>Selavu → Get connection link for the app</b>, copy the link, and paste it here.</p>' +
+    '<p class="small muted" style="margin:0">In your copy of the Selavu sheet choose <b>Selavu → Get connection link for the app</b>, copy the link, and paste it here. ' +
+    'To share one sheet with your family, paste the same link on each phone.</p>' +
     '<label class="f" for="cLink">Connection link<textarea class="in" id="cLink" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" style="resize:none;font-size:14px"></textarea></label>' +
     '<p class="small" id="cMsg" style="margin:0" aria-live="polite"></p>' +
     '<button type="button" class="btn block" id="cGo">Connect</button>';
@@ -881,9 +1330,10 @@ function openConnect() {
       }
       go.disabled = true; go.textContent = 'Checking…'; msg.textContent = ''; msg.className = 'small';
       api({ action: 'ping' }, conn).then(function (j) {
+        if (!j.v || j.v < 2) throw new Error('Your sheet\'s script is older than the app. Paste the new Code.gs into the sheet and deploy a new version (see the guide).');
         closeSheet();
         afterConnect(conn, j);
-      }, function (e) { go.disabled = false; go.textContent = 'Connect'; msg.textContent = e.message; msg.className = 'small up'; });
+      }).catch(function (e) { go.disabled = false; go.textContent = 'Connect'; msg.textContent = e.message; msg.className = 'small up'; });
     });
   });
 }
@@ -891,70 +1341,89 @@ function openConnect() {
 function afterConnect(conn, ping) {
   if (S.sample) S = blank();
   var here = S.tx.length, there = ping.count || 0;
-  var setConn = function () { S.sync = Object.assign(blank().sync, { url: conn.url, key: conn.key, sheetUrl: ping.sheetUrl || '' }); };
-  if (there && !here) {
-    setConn(); save();
-    openSheet('<h3>Connected to "' + esc(ping.name || 'your sheet') + '"</h3><p class="muted" style="margin:0">Your sheet already has <b>' + there + ' entries</b>. Bring them to this phone?</p>' +
-      '<button type="button" class="btn block" id="aPull">Bring them here</button><button type="button" class="btn ghost block" id="aLater">Not now</button>', function (sh) {
-      $('#aLater', sh).addEventListener('click', function () { closeSheet(); render(); });
-      $('#aPull', sh).addEventListener('click', function () { closeSheet(); restoreFromSheet(); });
-    });
-    return;
-  }
-  if (there && here) {
-    openSheet('<h3>Both have data</h3><p class="muted" style="margin:0">This phone has <b>' + here + ' entries</b> and the sheet has <b>' + there + '</b>. Which one should be kept?</p>' +
-      '<button type="button" class="btn block" id="aPhone">Keep this phone\'s data (replaces the sheet)</button>' +
-      '<button type="button" class="btn ghost block" id="aSheet">Use the sheet\'s data (replaces this phone)</button>' +
-      '<button type="button" class="btn ghost block" id="aNo">Cancel</button>', function (sh) {
-      $('#aNo', sh).addEventListener('click', closeSheet);
-      $('#aPhone', sh).addEventListener('click', function () { setConn(); S.sync.full = true; S.sync.meta = true; save(); closeSheet(); render(); syncNow(true); });
-      $('#aSheet', sh).addEventListener('click', function () { setConn(); save(); closeSheet(); restoreFromSheet(); });
-    });
-    return;
-  }
-  setConn(); S.sync.full = !!here; S.sync.meta = true; save(); render();
-  toast('Connected to Google Sheet' + (here ? '. Sending ' + here + ' entries…' : ''));
-  syncNow(false);
+  if (!(there && here)) { connectAndMerge(conn, ping, true); return; }
+  openSheet('<h3>Both have entries</h3><p class="muted" style="margin:0">This phone has <b>' + here + (here === 1 ? ' entry' : ' entries') + '</b> and "' + esc(ping.name || 'your sheet') + '" has <b>' + there + '</b>.</p>' +
+    '<button type="button" class="btn block" id="aMerge">Add this phone\'s entries to the sheet</button>' +
+    '<button type="button" class="btn ghost block" id="aSheet">Use only the sheet (removes this phone\'s ' + here + ')</button>' +
+    '<button type="button" class="btn ghost block" id="aNo">Cancel</button>' +
+    '<p class="small muted" style="margin:0">Cards and people with the same name are joined, not duplicated.</p>', function (sh) {
+    $('#aNo', sh).addEventListener('click', closeSheet);
+    $('#aMerge', sh).addEventListener('click', function () { closeSheet(); connectAndMerge(conn, ping, true); });
+    $('#aSheet', sh).addEventListener('click', function () { closeSheet(); connectAndMerge(conn, ping, false); });
+  });
+}
+
+function connectAndMerge(conn, ping, keepLocal) {
+  if (!keepLocal) S = blank();
+  var backup = S.sync;
+  S.sync = Object.assign(blank().sync, { url: conn.url, key: conn.key, sheetUrl: ping.sheetUrl || '' });
+  toast('Connecting…');
+  var mine = { tx: S.tx.map(function (t) { return t.id; }), cards: S.cards.map(function (c) { return c.id; }) };
+  return api({ action: 'sync', rev: '', ops: [] }).then(function (j) {
+    joinByName(j);
+    mine.cards = S.cards.map(function (c) { return c.id; });   // after joining, same-name cards are the sheet's (already owned)
+    queueAll();
+    applySnapshot(j);
+    S.sync.rev = '';
+    save(); ui.tab = 'home'; ui.who = ''; render(); syncStatusChanged();
+    var go = function () {
+      return syncNow(false).then(function () {
+        if (S.sync.error) { toast(S.sync.error); return; }
+        toast('Connected · ' + S.tx.length + ' entries' + (S.people.length > 1 ? ' for ' + S.people.map(function (p) { return p.name; }).join(' & ') : ''));
+        var noDay = S.cards.filter(function (c) { return c.type === 'Credit' && !c.stmtDay; });
+        if (noDay.length) { ui.tab = 'settings'; render(); toast('Set the statement day for ' + noDay.map(function (c) { return c.name; }).join(', ')); }
+      });
+    };
+    if (S.people.length && !personById(S.me)) openWho(go, mine); else go();
+  }, function (e) { S.sync = backup; save(); render(); toast(e.message); });
+}
+
+// When joining a sheet, a card or person this phone already has under the same name becomes the sheet's one.
+function joinByName(j) {
+  var byName = function (list) { var m = {}; (list || []).forEach(function (x) { m[String(x.name).toLowerCase()] = String(x.id); }); return m; };
+  var rc = byName(j.cards), rp = byName(j.people);
+  S.cards = S.cards.filter(function (c) {
+    var rid = rc[c.name.toLowerCase()];
+    if (!rid || rid === c.id) return true;
+    S.tx.forEach(function (t) { if (t.card === c.id) t.card = rid; });
+    Object.keys(S.paid).forEach(function (k) { if (k.indexOf(c.id + '|') === 0) { S.paid[rid + k.slice(c.id.length)] = S.paid[k]; delete S.paid[k]; } });
+    if (S.lastCard === c.id) S.lastCard = rid;
+    return false;
+  });
+  S.people = S.people.filter(function (p) {
+    var rid = rp[p.name.toLowerCase()];
+    if (!rid || rid === p.id) return true;
+    S.tx.forEach(function (t) { if (t.for === p.id) t.for = rid; if (t.by === p.id) t.by = rid; });
+    S.cards.forEach(function (c) { if (c.owner === p.id) c.owner = rid; });
+    if (S.me === p.id) S.me = rid;
+    return false;
+  });
 }
 
 function confirmRestore() {
-  openSheet('<h3>Restore from Google Sheet?</h3><p class="muted" style="margin:0">This replaces the ' + S.tx.length + ' entries and cards on this phone with what is in your sheet.' +
+  openSheet('<h3>Reload from Google Sheet?</h3><p class="muted" style="margin:0">This replaces everything on this phone with what is in the sheet.' +
     (pendingCount() ? ' <b>' + pendingCount() + ' changes on this phone have not reached the sheet yet and will be lost.</b>' : '') + '</p>' +
-    '<button type="button" class="btn block" id="pYes">Restore from sheet</button><button type="button" class="btn ghost block" id="pNo">Cancel</button>', function (sh) {
+    '<button type="button" class="btn block" id="pYes">Reload from sheet</button><button type="button" class="btn ghost block" id="pNo">Cancel</button>', function (sh) {
     $('#pNo', sh).addEventListener('click', closeSheet);
     $('#pYes', sh).addEventListener('click', function () { closeSheet(); restoreFromSheet(); });
   });
 }
 
 function restoreFromSheet() {
+  S.sync.ops = []; S.sync.rev = ''; S.sync.error = ''; save();
   toast('Reading your Google Sheet…');
-  return api({ action: 'pull' }).then(function (j) {
-    var sync = S.sync;
-    S = blank();
-    S.sync = Object.assign(sync, { ops: [], error: '' });
-    S.cards = (j.cards || []).map(function (c, i) {
-      return { id: c.id, name: c.name, type: CARD_TYPES.indexOf(c.type) >= 0 ? c.type : 'Debit', stmtDay: +c.stmtDay || '', dueDay: +c.dueDay || '',
-               dueDays: '', limit: +c.limit || '', color: c.color || CARD_COLORS[i % CARD_COLORS.length] };
-    });
-    S.tx = (j.tx || []).map(function (t) {
-      return { id: t.id, date: t.date, card: t.card, amount: +t.amount, kind: KINDS.indexOf(t.kind) >= 0 ? t.kind : 'Expense',
-               category: t.category || '', note: t.note || '' };
-    });
-    S.budgets = j.budgets || {}; S.paid = j.paid || {};
-    S.lastCard = S.cards[0] ? S.cards[0].id : null;
-    // Write back once so every row carries this app's bill month and cycle.
-    S.sync.full = true; S.sync.meta = true;
-    save(); ui.tab = 'home'; render();
-    var noDay = S.cards.filter(function (c) { return c.type === 'Credit' && !c.stmtDay; });
-    toast(S.tx.length + ' entries restored' + (noDay.length ? '. Set the statement day for ' + noDay.map(function (c) { return c.name; }).join(', ') : ''));
-    if (noDay.length) { ui.tab = 'settings'; render(); }
-    scheduleSync(1500);
-  }, function (e) { toast(e.message); });
+  return syncNow(false).then(function () {
+    if (S.sync.error) { toast(S.sync.error); return; }
+    ui.tab = 'home'; render();
+    toast(S.tx.length + ' entries loaded from your sheet');
+  });
 }
 
 window.addEventListener('online', function () { syncStatusChanged(); scheduleSync(300); });
 window.addEventListener('offline', syncStatusChanged);
-document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') scheduleSync(300); });
+// Pick up the other phone's entries: when the app comes back to the front, and every 2 minutes while open.
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && (pendingCount() || Date.now() - lastPull > 15000)) scheduleSync(300); });
+setInterval(function () { if (document.visibilityState === 'visible' && syncOn() && Date.now() - lastPull > 110000) syncNow(false); }, 30000);
 
 // ---------- Sample data ----------
 function loadSample() {
@@ -1002,7 +1471,7 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 if ('serviceWorker' in navigator && location.protocol === 'https:' && window.top === window.self) {
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__selavu = { billMonthFor: billMonthFor, statement: statement, parseConnLink: parseConnLink, syncNow: syncNow, state: function () { return S; } };
+window.__selavu = { billMonthFor: billMonthFor, statement: statement, parseConnLink: parseConnLink, syncNow: syncNow, state: function () { return S; }, migrate: migrate };
 render();
 syncStatusChanged();
 handleLink();

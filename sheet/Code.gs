@@ -1,17 +1,20 @@
 /**
  * Selavu → Google Sheet sync
  *
- * Lives inside the template sheet (Extensions → Apps Script). Each person makes their own copy of the
- * template, deploys this script as a Web app, and pastes the connection link into Selavu → Settings.
- * The app is the source of truth: it sends changes here; "Restore from Google Sheet" reads them back.
+ * Lives inside the template sheet (Extensions → Apps Script). A household makes one copy of the template,
+ * deploys this script as a Web app, and pastes the same connection link into Selavu on each phone.
+ * Phones send their changes (action "sync": a list of per-item changes) and get the whole book back,
+ * so entries logged on one phone show up on the other.
  *
  * Tabs: Summary (charts), Transactions, Cards, one tab per bill month (e.g. "Nov-2026"),
- * and a hidden _Settings tab for budgets, paid bills and the secret key.
+ * and a hidden _Settings tab for budgets, paid bills and people.
  */
 
+var VERSION = 2;
+
 var TX = 'Transactions', CARDS = 'Cards', SUMMARY = 'Summary', SETTINGS = '_Settings', OLD = 'Old data';
-var TX_HEAD = ['ID', 'Date', 'Card', 'Amount (₹)', 'Kind', 'Category', 'Note', 'Bill Month', 'Cycle', 'Updated'];
-var CARD_HEAD = ['Card', 'Type', 'Statement day', 'Payment due day', 'Credit limit (₹)', 'Colour', 'ID'];
+var TX_HEAD = ['ID', 'Date', 'Card', 'Amount (₹)', 'Kind', 'Category', 'Note', 'Bill Month', 'Cycle', 'Updated', 'For', 'Logged by'];
+var CARD_HEAD = ['Card', 'Type', 'Statement day', 'Payment due day', 'Credit limit (₹)', 'Colour', 'ID', 'Owner'];
 var FIXED_TABS = [SUMMARY, TX, CARDS, OLD, SETTINGS];
 var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 var GOLD = '#c79a45', INK = '#111111';
@@ -67,9 +70,20 @@ function showConnectionLink() {
     '<p>Copy this link and paste it in <b>Selavu → Settings → Connect Google Sheet</b>.</p>' +
     '<textarea id="l" readonly style="width:100%;height:90px;font:12px monospace">' + link + '</textarea>' +
     '<p><button onclick="var t=document.getElementById(\'l\');t.select();document.execCommand(\'copy\');this.textContent=\'Copied\'">Copy link</button></p>' +
-    '<p style="color:#666">Keep it private: anyone with this link can read and change the entries in this sheet.</p></div>')
+    '<p style="color:#666">Use the same link on your spouse\'s phone to share this sheet. Keep it private: anyone with this link can read and change the entries.</p></div>')
     .setWidth(460).setHeight(260);
   ui.showModalDialog(html, 'Selavu connection link');
+}
+
+// Hand edits in the sheet: tell the phones to read it again on their next sync.
+function onEdit() { try { bumpRev_(); } catch (e) {} }
+
+function bumpRev_() { PropertiesService.getDocumentProperties().setProperty('REV', String(Date.now())); }
+function rev_() {
+  var props = PropertiesService.getDocumentProperties();
+  var r = props.getProperty('REV');
+  if (!r) { r = String(Date.now()); props.setProperty('REV', r); }
+  return r;
 }
 
 function key_() {
@@ -93,9 +107,11 @@ function doPost(e) {
     if (!body.k || body.k !== PropertiesService.getDocumentProperties().getProperty('KEY')) return out_({ ok: false, error: 'bad-key' });
     var ss = SpreadsheetApp.getActive();
     ensureTabs_(ss);
-    if (body.action === 'ping') return out_({ ok: true, sheetUrl: ss.getUrl(), name: ss.getName(), count: txCount_(ss) });
+    if (body.action === 'ping') return out_({ ok: true, v: VERSION, sheetUrl: ss.getUrl(), name: ss.getName(), count: txCount_(ss),
+                                               people: readSettings_(ss).people });
+    if (body.action === 'sync') return out_(sync_(ss, body));
     if (body.action === 'pull') return out_(pull_(ss));
-    if (body.action === 'push') return out_(push_(ss, body));
+    if (body.action === 'push') { var r = push_(ss, body); bumpRev_(); return out_(r); }
     return out_({ ok: false, error: 'unknown-action' });
   } catch (err) {
     return out_({ ok: false, error: String(err && err.message || err) });
@@ -106,7 +122,65 @@ function doPost(e) {
 
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
-// ---------- Push (app → sheet) ----------
+// ---------- Sync (each phone ↔ sheet) ----------
+
+/**
+ * body: { rev, ops: [ {k:'tx', id, tx|null}, {k:'card', id, card|null}, {k:'person', id, person|null},
+ *                     {k:'budget', id: category, v|null}, {k:'paid', id: 'cardId|yyyy-MM', v|null} ] }   (null = deleted)
+ * Returns the whole book (like pull) with a new rev, or { same: true } when nothing changed since the phone's rev.
+ */
+function sync_(ss, body) {
+  var ops = body.ops || [];
+  if (ops.length) { applyOps_(ss, ops); bumpRev_(); }
+  var rev = rev_();
+  if (!ops.length && body.rev && body.rev === rev) return { ok: true, same: true, rev: rev, sheetUrl: ss.getUrl() };
+  var snap = pull_(ss);
+  snap.rev = rev;
+  return snap;
+}
+
+function applyOps_(ss, ops) {
+  var st = readSettings_(ss), stChanged = false, cards = null;
+  ops.forEach(function (o) {
+    if (o.k === 'person') {
+      var i = indexOf_(st.people, o.id);
+      if (!o.person) { if (i >= 0) st.people.splice(i, 1); }
+      else if (i >= 0) st.people[i] = { id: o.id, name: String(o.person.name) };
+      else st.people.push({ id: o.id, name: String(o.person.name) });
+      stChanged = true;
+    } else if (o.k === 'budget' || o.k === 'paid') {
+      var map = o.k === 'budget' ? st.budgets : st.paid;
+      if (o.v) map[o.id] = o.v; else delete map[o.id];
+      stChanged = true;
+    } else if (o.k === 'card') {
+      cards = cards || readCards_(ss);
+      var j = indexOf_(cards, o.id);
+      if (!o.card) { if (j >= 0) cards.splice(j, 1); }
+      else if (j >= 0) cards[j] = o.card;
+      else cards.push(o.card);
+    }
+  });
+  if (stChanged) writeSettings_(ss, st);
+  if (cards) writeCards_(ss, cards);
+  var txOps = ops.filter(function (o) { return o.k === 'tx'; })
+    .map(function (o) { return o.tx ? { op: 'upsert', tx: o.tx } : { op: 'delete', id: o.id }; });
+  if (txOps.length) applyTx_(ss, txOps);
+}
+
+function indexOf_(list, id) { for (var i = 0; i < list.length; i++) if (String(list[i].id) === String(id)) return i; return -1; }
+
+function readSettings_(ss) {
+  var st = ss.getSheetByName(SETTINGS);
+  var parse = function (v, d) { try { return JSON.parse(v) || d; } catch (e) { return d; } };
+  var v = st.getRange('B1:B3').getValues();
+  return { budgets: parse(v[0][0], {}), paid: parse(v[1][0], {}), people: parse(v[2][0], []) };
+}
+function writeSettings_(ss, s) {
+  ss.getSheetByName(SETTINGS).getRange('A1:B3').setValues([['budgets', JSON.stringify(s.budgets)], ['paid', JSON.stringify(s.paid)],
+                                                            ['people', JSON.stringify(s.people)]]);
+}
+
+// ---------- Push (older app versions) ----------
 
 /**
  * body: { full?: true, tx?: [...all entries] }  replaces every transaction
@@ -132,27 +206,37 @@ function push_(ss, body) {
     if (rows.length) sh.getRange(2, 1, rows.length, TX_HEAD.length).setValues(rows);
     rebuildMonths_(ss, null);
   } else {
-    var index = idIndex_(sh);
-    var deletes = [];
-    (body.ops || []).forEach(function (o) {
-      var at = index[o.op === 'delete' ? o.id : o.tx.id];
-      if (at) { var old = sh.getRange(at, 8).getValue(); if (old instanceof Date) touched[ym_(old, tz)] = 1; }
-      if (o.op === 'delete') { if (at) deletes.push(at); return; }
-      touched[o.tx.billMonth] = 1;
-      var row = row_(o.tx, tz);
-      if (at) sh.getRange(at, 1, 1, row.length).setValues([row]);
-      else { sh.appendRow(row); index[o.tx.id] = sh.getLastRow(); }
-    });
-    deletes.sort(function (a, b) { return b - a; }).forEach(function (r) { sh.deleteRow(r); });
-    rebuildMonths_(ss, touched);
+    applyTx_(ss, body.ops || []);
   }
   formatTx_(sh);
   return { ok: true, count: txCount_(ss), sheetUrl: ss.getUrl() };
 }
 
+// ops: [{op:'upsert', tx}, {op:'delete', id}]; rebuilds the month tabs they touch.
+function applyTx_(ss, ops) {
+  var tz = ss.getSpreadsheetTimeZone();
+  var sh = ss.getSheetByName(TX);
+  var touched = {};
+  var index = idIndex_(sh);
+  var deletes = [];
+  ops.forEach(function (o) {
+    var at = index[o.op === 'delete' ? o.id : o.tx.id];
+    if (at) { var old = sh.getRange(at, 8).getValue(); if (old instanceof Date) touched[ym_(old, tz)] = 1; }
+    if (o.op === 'delete') { if (at) deletes.push(at); return; }
+    touched[o.tx.billMonth] = 1;
+    var row = row_(o.tx, tz);
+    if (at) sh.getRange(at, 1, 1, row.length).setValues([row]);
+    else { sh.appendRow(row); index[o.tx.id] = sh.getLastRow(); }
+  });
+  deletes.sort(function (a, b) { return b - a; }).forEach(function (r) { sh.deleteRow(r); });
+  rebuildMonths_(ss, touched);
+  formatTx_(sh);
+}
+
 function row_(t, tz) {
   return [t.id, Utilities.parseDate(t.date, tz, "yyyy-MM-dd'T'HH:mm"), t.card, Number(t.amount), t.kind, t.category || '',
-    t.note || '', t.billMonth ? Utilities.parseDate(t.billMonth + '-01', tz, 'yyyy-MM-dd') : '', t.cycle || '', new Date()];
+    t.note || '', t.billMonth ? Utilities.parseDate(t.billMonth + '-01', tz, 'yyyy-MM-dd') : '', t.cycle || '', new Date(),
+    t['for'] || '', t.by || ''];
 }
 
 function idIndex_(sh) {
@@ -165,24 +249,40 @@ function idIndex_(sh) {
 function writeCards_(ss, cards) {
   var sh = ss.getSheetByName(CARDS);
   if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, CARD_HEAD.length).clearContent();
-  var rows = cards.map(function (c) { return [c.name, c.type, c.stmtDay || '', c.dueDay || '', c.limit || '', c.color || '', c.id]; });
+  var rows = cards.map(function (c) { return [c.name, c.type, c.stmtDay || '', c.dueDay || '', c.limit || '', c.color || '', c.id, c.owner || '']; });
   if (rows.length) sh.getRange(2, 1, rows.length, CARD_HEAD.length).setValues(rows);
 }
 
 // ---------- Pull (sheet → app) ----------
 
+// Cards tab as written (owner as a name).
+function readCards_(ss) {
+  var cs = ss.getSheetByName(CARDS), out = [];
+  if (cs.getLastRow() < 2) return out;
+  cs.getRange(2, 1, cs.getLastRow() - 1, CARD_HEAD.length).getValues().forEach(function (r) {
+    if (!r[0]) return;
+    out.push({ id: String(r[6] || 'c' + Utilities.getUuid().slice(0, 8)), name: String(r[0]), type: String(r[1] || 'Debit'),
+               stmtDay: Number(r[2]) || '', dueDay: Number(r[3]) || '', limit: Number(r[4]) || '', color: String(r[5] || ''), owner: String(r[7] || '') });
+  });
+  return out;
+}
+
 function pull_(ss) {
   var tz = ss.getSpreadsheetTimeZone();
+  var st = readSettings_(ss), peopleAdded = false;
+  // The sheet shows names; the phones work with ids. Unknown names (typed in the sheet) become new people.
+  var pid = {};
+  st.people.forEach(function (p) { pid[String(p.name).toLowerCase()] = p.id; });
+  var who = function (name) {
+    name = String(name || '').trim();
+    if (!name) return '';
+    if (/^(family|joint)$/i.test(name)) return 'family';
+    var id = pid[name.toLowerCase()];
+    if (!id) { id = 'p' + Utilities.getUuid().slice(0, 8); pid[name.toLowerCase()] = id; st.people.push({ id: id, name: name }); peopleAdded = true; }
+    return id;
+  };
   var cards = [], byName = {};
-  var cs = ss.getSheetByName(CARDS);
-  if (cs.getLastRow() > 1) {
-    cs.getRange(2, 1, cs.getLastRow() - 1, CARD_HEAD.length).getValues().forEach(function (r) {
-      if (!r[0]) return;
-      var c = { id: String(r[6] || 'c' + Utilities.getUuid().slice(0, 8)), name: String(r[0]), type: String(r[1] || 'Debit'),
-                stmtDay: Number(r[2]) || '', dueDay: Number(r[3]) || '', limit: Number(r[4]) || '', color: String(r[5] || '') };
-      cards.push(c); byName[c.name.toLowerCase()] = c;
-    });
-  }
+  readCards_(ss).forEach(function (c) { c.owner = who(c.owner); cards.push(c); byName[c.name.toLowerCase()] = c; });
   var tx = [];
   var sh = ss.getSheetByName(TX);
   if (sh.getLastRow() > 1) {
@@ -192,13 +292,12 @@ function pull_(ss) {
       if (!c) { c = { id: 'c' + Utilities.getUuid().slice(0, 8), name: name, type: /\bcc\b|credit/i.test(name) ? 'Credit' : 'Debit',
                       stmtDay: '', dueDay: '', limit: '', color: '' }; cards.push(c); byName[name.toLowerCase()] = c; }
       tx.push({ id: String(r[0]), date: Utilities.formatDate(r[1], tz, "yyyy-MM-dd'T'HH:mm"), card: c.id, amount: Number(r[3]),
-                kind: String(r[4] || 'Expense'), category: String(r[5] || ''), note: String(r[6] || '') });
+                kind: String(r[4] || 'Expense'), category: String(r[5] || ''), note: String(r[6] || ''),
+                billMonth: r[7] instanceof Date ? ym_(r[7], tz) : '', 'for': who(r[10]), by: who(r[11]) });
     });
   }
-  var st = ss.getSheetByName(SETTINGS);
-  var parse = function (v) { try { return JSON.parse(v || '{}'); } catch (e) { return {}; } };
-  return { ok: true, cards: cards, tx: tx, budgets: parse(st.getRange('B1').getValue()), paid: parse(st.getRange('B2').getValue()),
-           sheetUrl: ss.getUrl() };
+  if (peopleAdded) writeSettings_(ss, st);
+  return { ok: true, v: VERSION, people: st.people, cards: cards, tx: tx, budgets: st.budgets, paid: st.paid, sheetUrl: ss.getUrl() };
 }
 
 function txCount_(ss) { return Math.max(ss.getSheetByName(TX).getLastRow() - 1, 0); }
@@ -211,7 +310,10 @@ function ensureTabs_(ss) {
     tx.getRange(1, 1, 1, TX_HEAD.length).setValues([TX_HEAD]);
     styleHead_(tx.getRange(1, 1, 1, TX_HEAD.length));
     tx.setFrozenRows(1);
-    [80, 150, 140, 100, 90, 150, 220, 100, 130, 150].forEach(function (w, i) { tx.setColumnWidth(i + 1, w); });
+    [80, 150, 140, 100, 90, 150, 220, 100, 130, 150, 110, 110].forEach(function (w, i) { tx.setColumnWidth(i + 1, w); });
+  } else if (tx.getRange(1, 11).getValue() !== 'For') {
+    tx.getRange(1, 11, 1, 2).setValues([['For', 'Logged by']]);   // sheets made before people were added
+    styleHead_(tx.getRange(1, 11, 1, 2));
   }
   var cs = ss.getSheetByName(CARDS) || ss.insertSheet(CARDS);
   if (cs.getRange(1, 1).getValue() !== 'Card') {
@@ -219,6 +321,9 @@ function ensureTabs_(ss) {
     styleHead_(cs.getRange(1, 1, 1, CARD_HEAD.length));
     cs.setFrozenRows(1);
     cs.setColumnWidth(1, 180);
+  } else if (cs.getRange(1, 8).getValue() !== 'Owner') {
+    cs.getRange(1, 8).setValue('Owner');
+    styleHead_(cs.getRange(1, 8));
   }
   var st = ss.getSheetByName(SETTINGS) || ss.insertSheet(SETTINGS);
   if (!st.isSheetHidden()) st.hideSheet();
@@ -246,14 +351,19 @@ function buildSummary_(ss) {
   sh.getRange('A2').setValue('Updated automatically from the Selavu app. Spending = Kind "Expense". Credit cards are grouped by billing cycle.')
     .setFontColor('#666666');
   sh.getRange('A4').setValue('Spending by bill month and card').setFontWeight('bold');
-  sh.getRange('A5').setFormula('=IFERROR(QUERY(Transactions!A1:J, "select H, sum(D) where E = \'Expense\' and H is not null ' +
+  sh.getRange('A5').setFormula('=IFERROR(QUERY(Transactions!A1:L, "select H, sum(D) where E = \'Expense\' and H is not null ' +
     'group by H pivot C label H \'Bill month\'", 1), "No entries yet")');
   sh.getRange('A5:A40').setNumberFormat('mmm yyyy');
   sh.getRange('B6:L40').setNumberFormat('₹#,##0');
   sh.getRange('N4').setValue('This month by category').setFontWeight('bold');
-  sh.getRange('N5').setFormula('=IFERROR(QUERY(Transactions!A1:J, "select F, sum(D) where E = \'Expense\' and H = date \'"&' +
+  sh.getRange('N5').setFormula('=IFERROR(QUERY(Transactions!A1:L, "select F, sum(D) where E = \'Expense\' and H = date \'"&' +
     'TEXT(DATE(YEAR(TODAY()),MONTH(TODAY()),1),"yyyy-mm-dd")&"\' group by F order by sum(D) desc label F \'Category\', sum(D) \'Spent\'", 1), "Nothing this month yet")');
-  sh.getRange('O6:O40').setNumberFormat('₹#,##0');
+  sh.getRange('O6:O26').setNumberFormat('₹#,##0');
+  sh.getRange('N28').setValue('Spending by person').setFontWeight('bold');
+  sh.getRange('N29').setFormula('=IFERROR(QUERY(Transactions!A1:L, "select H, sum(D) where E = \'Expense\' and H is not null and K <> \'\' ' +
+    'group by H pivot K label H \'Bill month\'", 1), "Add people in the app to see this")');
+  sh.getRange('N30:N60').setNumberFormat('mmm yyyy');
+  sh.getRange('O30:R60').setNumberFormat('₹#,##0');
   sh.setColumnWidth(1, 110);
   sh.setColumnWidth(14, 170);
   sh.insertChart(sh.newChart().setChartType(Charts.ChartType.COLUMN).addRange(sh.getRange('A5:L40'))
@@ -262,6 +372,9 @@ function buildSummary_(ss) {
   sh.insertChart(sh.newChart().setChartType(Charts.ChartType.PIE).addRange(sh.getRange('N5:O25'))
     .setNumHeaders(1).setOption('pieHole', 0.5).setOption('title', 'This month by category')
     .setPosition(24, 4, 0, 0).setOption('width', 620).setOption('height', 320).build());
+  sh.insertChart(sh.newChart().setChartType(Charts.ChartType.COLUMN).addRange(sh.getRange('N29:R60'))
+    .setNumHeaders(1).setOption('isStacked', true).setOption('title', 'Spending by person')
+    .setOption('legend', { position: 'top' }).setPosition(42, 4, 0, 0).setOption('width', 620).setOption('height', 320).build());
 }
 
 // ---------- Month tabs ----------
@@ -300,10 +413,13 @@ function monthTab_(ss, ym, rows) {
   sh.getRange('A2').setValue('Credit cards: statement period ending this month. Debit / UPI / cash: calendar month. Rebuilt automatically.')
     .setFontColor('#666666');
 
-  var byCard = {}, byCat = {}, spent = 0;
+  var byCard = {}, byCat = {}, byWho = {}, spent = 0;
   rows.forEach(function (r) {
     var c = byCard[r[2]] = byCard[r[2]] || { cycle: r[8], exp: 0, charged: 0 };
-    if (r[4] === 'Expense') { c.exp += r[3]; spent += r[3]; byCat[r[5] || 'Other'] = (byCat[r[5] || 'Other'] || 0) + r[3]; }
+    if (r[4] === 'Expense') {
+      c.exp += r[3]; spent += r[3]; byCat[r[5] || 'Other'] = (byCat[r[5] || 'Other'] || 0) + r[3];
+      if (r[10]) byWho[r[10]] = (byWho[r[10]] || 0) + r[3];
+    }
     if (r[4] !== 'Received') c.charged += r[3];
   });
   var cardRows = Object.keys(byCard).sort().map(function (k) { return [k, byCard[k].cycle, byCard[k].exp, byCard[k].charged]; });
@@ -326,10 +442,20 @@ function monthTab_(ss, ym, rows) {
       .setOption('width', 420).setOption('height', 280).build());
   }
 
-  var r0 = c0 + catRows.length + 3;
-  sh.getRange(r0, 1, 1, 7).setValues([['Date', 'Card', 'Amount', 'Kind', 'Category', 'Note', 'Cycle']]);
-  styleHead_(sh.getRange(r0, 1, 1, 7));
-  sh.getRange(r0 + 1, 1, rows.length, 7).setValues(rows.map(function (r) { return [r[1], r[2], r[3], r[4], r[5], r[6], r[8]]; }));
+  var w0 = c0 + catRows.length + 2;
+  var whoRows = Object.keys(byWho).map(function (k) { return [k, byWho[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
+  if (whoRows.length) {
+    sh.getRange(w0, 1, 1, 2).setValues([['Spent by', 'Spent']]);
+    styleHead_(sh.getRange(w0, 1, 1, 2));
+    sh.getRange(w0 + 1, 1, whoRows.length, 2).setValues(whoRows);
+    sh.getRange(w0 + 1, 2, whoRows.length, 1).setNumberFormat('₹#,##0');
+    w0 += whoRows.length + 2;
+  }
+
+  var r0 = w0 + 1;
+  sh.getRange(r0, 1, 1, 9).setValues([['Date', 'Card', 'Amount', 'Kind', 'Category', 'Note', 'Cycle', 'For', 'Logged by']]);
+  styleHead_(sh.getRange(r0, 1, 1, 9));
+  sh.getRange(r0 + 1, 1, rows.length, 9).setValues(rows.map(function (r) { return [r[1], r[2], r[3], r[4], r[5], r[6], r[8], r[10], r[11]]; }));
   sh.getRange(r0 + 1, 1, rows.length, 1).setNumberFormat('d mmm yyyy');
   sh.getRange(r0 + 1, 3, rows.length, 1).setNumberFormat('₹#,##0');
   sh.setColumnWidth(1, 130); sh.setColumnWidth(2, 140); sh.setColumnWidth(6, 200); sh.setColumnWidth(7, 130);

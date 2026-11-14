@@ -16,10 +16,14 @@ HEAD = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1e6091">
+<meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap">
 <meta name="apple-mobile-web-app-title" content="Selavu">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -45,8 +49,8 @@ def main():
         "start_url": "./",
         "scope": "./",
         "display": "standalone",
-        "background_color": "#f2f4f7",
-        "theme_color": "#1e6091",
+        "background_color": "#0a0a0b",
+        "theme_color": "#0a0a0b",
         "icons": [
             {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
             {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
@@ -66,7 +70,15 @@ self.addEventListener('activate', e => {{
 }});
 self.addEventListener('fetch', e => {{
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  if (e.request.method !== 'GET') return;
+  // Montserrat from Google Fonts: keep a copy so the app looks the same offline.
+  if (/^fonts\\.(googleapis|gstatic)\\.com$/.test(url.hostname)) {{
+    e.respondWith(caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {{
+      const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return res;
+    }})));
+    return;
+  }}
+  if (url.origin !== location.origin) return;
   // Network first for the page (picks up updates), cache as the offline fallback.
   e.respondWith(fetch(e.request).then(res => {{
     const copy = res.clone();

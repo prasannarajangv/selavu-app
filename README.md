@@ -7,6 +7,8 @@ A phone app for tracking card spending by **billing cycle**. It opens from a lin
 - **Bills** tab: every statement with its total, due date and a *Mark paid* toggle
 - Charts: category donut, 6-month trend by card, daily spend
 - **Syncs to your own Google Sheet** automatically: a row per entry, a tab per bill month, charts. It downloads as Excel and doubles as your backup.
+- **Family mode:** each family member logs on their own phone (iPhone or Android) into one shared sheet. Every entry is tagged **who spent it** (a person, or Family), and you can filter by person.
+- **Insights:** where the money went this month compared with your usual, and where you can cut back.
 
 ---
 
@@ -19,10 +21,12 @@ A phone app for tracking card spending by **billing cycle**. It opens from a lin
 5. [Log a payment every day](#5-log-a-payment-every-day)
 6. [One tap from anywhere](#6-one-tap-from-anywhere-optional)
 7. [Connect your Google Sheet](#7-connect-your-google-sheet)
-8. [Bring in your old tracker history](#8-bring-in-your-old-tracker-history-optional)
-9. [Keep your data safe](#9-keep-your-data-safe)
-10. [FAQ](#faq)
-11. [For developers](#for-developers)
+8. [Track spending as a family](#8-track-spending-as-a-family)
+9. [Bring in your old tracker history](#9-bring-in-your-old-tracker-history-optional)
+10. [Keep your data safe](#10-keep-your-data-safe)
+11. [Updating the sheet script](#11-updating-the-sheet-script)
+12. [FAQ](#faq)
+13. [For developers](#for-developers)
 
 ---
 
@@ -81,6 +85,8 @@ Share that `/copy` link along with the app link. Nobody can see your data throug
 1. Open the link in **Chrome**.
 2. Tap **Install** on the banner, or use the **⋮** menu → **Add to Home screen / Install app**.
 3. Open **Selavu** from the Home Screen or app drawer.
+
+On Samsung phones, **Samsung Internet** works too: **≡ menu → Add page to → Home screen**. Chrome gives the more app-like install.
 
 After the first open, the app works **without internet**. Entries made offline are sent to your Google Sheet when you're back online.
 
@@ -176,9 +182,9 @@ https://<your-site>/?amount=250&card=Axis%20CC&category=Food%20%26%20Dining&note
 
 Every entry you save, edit or delete in Selavu is copied to **your own** Google Sheet within a second or two. The sheet has:
 
-- **Summary:** spending by bill month and card, plus this month by category, with charts
-- **Transactions:** one row per entry
-- **Cards:** your cards and their statement and due days
+- **Summary:** spending by bill month and card, this month by category, and spending by person, with charts
+- **Transactions:** one row per entry, with **For** (who spent it) and **Logged by**
+- **Cards:** your cards, their statement and due days, and their **Owner**
 - **One tab per bill month** (e.g. `Nov-2026`): card totals, category chart and that month's entries
 
 It works offline too: entries wait on the phone and go out when you're back online. The dot next to **Selavu** at the top shows the state: green = synced, amber = waiting, red = problem.
@@ -197,37 +203,66 @@ It works offline too: entries wait on the phone and go out when you're back onli
 5. Send that link to your phone (e.g. WhatsApp it to yourself and copy it).
 6. In Selavu: **Settings → Connect Google Sheet** → paste → **Connect**.
    - Phone has entries, sheet is empty: they're all sent to the sheet.
-   - Sheet has entries, phone is empty: you're asked whether to bring them to the phone.
-   - Both have entries: you choose which one to keep.
+   - Sheet has entries, phone is empty: they're brought to the phone.
+   - Both have entries: choose **Add this phone's entries to the sheet** (keeps both; cards and people with the same name are joined) or **Use only the sheet**.
 
 > **Keep the connection link private.** Anyone with it can read and change the entries in your sheet. If it leaks, run **Deploy → Manage deployments → Archive** and deploy again.
 
 ### In Settings after connecting
 
-- **Sync now:** sends anything waiting straight away.
+- **Sync now:** sends anything waiting and picks up changes from the other phone straight away. (It also happens on its own when you open the app, and every 2 minutes while it's open.)
 - **Open sheet:** opens your Google Sheet.
-- **Restore from Google Sheet:** replaces what's on the phone with the sheet. Use it on a new phone or after reinstalling.
+- **Reload from Google Sheet:** throws away this phone's copy and takes the sheet's. Rarely needed.
 - **Disconnect:** stops syncing. The sheet keeps everything already sent.
 
 **Excel:** in Google Sheets, **File → Download → Microsoft Excel (.xlsx)** gives you a real Excel file any time, month tabs included.
 
 ---
 
-## 8. Bring in your old tracker history (optional)
+## 8. Track spending as a family
+
+Everyone in the household logs on their own phone, and everything lands in **one shared Google Sheet**. Each phone shows the whole household, and you can switch between **All**, each person, and **Family**. Add as many people as you like.
+
+**One sheet per household.** Another household (for example your parents) makes **their own copy** of the template sheet and gets their own connection link. Their data never mixes with yours, and nobody sees another household's entries unless they have that household's link.
+
+**How entries are separated**
+
+| | What it means | Set by |
+|---|---|---|
+| **Spent by** (on each entry) | Whose spending it is: a person, or **Family** (shared costs) | Automatically: the person using the phone. Groceries, Rent, Bills and Home repairs default to **Family**. Change it with one tap. |
+| **Belongs to** (on each card) | Whose bill it is: a person, or **Joint** | When adding the card. The card's own phone lists it first. |
+| **Logged by** | Which phone entered it | Automatically |
+
+So if a family member pays with your add-on card, the bill stays on **your** card (Bills tab), but the spend counts as **theirs** (or Family). Budgets are for the whole household; the Home screen shows **Who spent** how much each month.
+
+**Set it up**
+
+1. **On your phone** (already connected to the sheet): **Settings → People → Add my name** (your existing cards and entries become yours) → **+ Add person** for each family member.
+2. **Install Selavu on their phone** (step 2; on Android use **Chrome → ⋮ → Add to Home screen / Install app**).
+3. On their phone: **Settings → Connect Google Sheet** → paste **the same connection link** you use → **Connect** → pick their name under **Who uses this phone?**
+4. They add their own cards (**Settings → + Add card**; **Belongs to** is already set to them). Your cards are already there, so they can also log on your add-on card.
+
+That's it. Entries from any phone show up on the others within a couple of minutes, or straight away with **Sync now**. Anyone in the household can fix or delete any entry.
+
+> Every phone in the household must use the same connection link, and the sheet must run the latest script (see [Updating the sheet script](#11-updating-the-sheet-script)).
+
+---
+
+## 9. Bring in your old tracker history (optional)
 
 1. In your Selavu sheet, choose **Selavu → Import old tracker rows**. It creates an **Old data** tab.
 2. Paste your old rows there with a header row: **Date**, **Card**, **Amount**, **Category**.
 3. Run **Selavu → Import old tracker rows** again. Old categories (e.g. "Outside food", "Zepto", "Chit amount") are matched to the new list, and the original text goes in the Note column.
-4. In Selavu: **Settings → Restore from Google Sheet**.
+4. In Selavu: **Settings → Sync now** (the rows come to the phone).
 5. Set the **statement day** for any credit card the app points out. The app then sorts every entry into its bill month and updates the sheet.
 
 ---
 
-## 9. Keep your data safe
+## 10. Keep your data safe
 
 With a Google Sheet connected, your sheet **is** your backup:
 
-- **New phone, or you deleted the app:** install Selavu (step 2) → **Settings → Connect Google Sheet** with the same link → **Bring them here**.
+- **New phone, or you deleted the app:** install Selavu (step 2) → **Settings → Connect Google Sheet** with the same link. Everything comes back.
 - Check that the dot at the top is green before deleting the app or changing phones, so nothing is still waiting.
 
 Without a sheet connected, entries live **only on the phone**. These erase them:
@@ -238,19 +273,31 @@ Without a sheet connected, entries live **only on the phone**. These erase them:
 
 ---
 
+## 11. Updating the sheet script
+
+When Selavu gets a new feature that needs the sheet (like Family mode), the script in your sheet must be updated once. If it's out of date, Selavu says *"Your sheet's script is older than the app"*.
+
+1. Open your Selavu sheet → **Extensions → Apps Script**.
+2. Select everything in `Code.gs`, delete it, paste the new [`sheet/Code.gs`](sheet/Code.gs) → **Save**.
+3. **Deploy → Manage deployments** → ✏️ (edit) → **Version: New version** → **Deploy**.
+   The Web app URL and your connection link **stay the same**, so nothing changes on the phones.
+4. In Selavu: **Settings → Sync now**.
+
+---
+
 ## FAQ
 
 **Is it free? Do I need an Apple developer account?**
 Yes, it's free, and no account is needed. It's a web app, so it skips the App Store entirely.
 
 **Can two phones share the same data?**
-Not live. Each phone keeps its own copy. If both are connected to the same sheet, the last phone to send overwrites rows with the same entry. It's best to log from one phone and use **Restore from Google Sheet** on another when needed.
+Yes. Connect them with the same link (see [Track spending as a family](#8-track-spending-as-a-family)). Each phone sends only what changed and then picks up the other phone's entries, so nothing is overwritten. If both phones edit the *same* entry at the same time, the later one wins.
 
 **Can I edit entries in the Google Sheet?**
-Edits in the sheet aren't sent back to the app automatically, and the next change from the app may overwrite them. Make changes in the app. If you did edit the sheet, use **Restore from Google Sheet** to bring the edits to the phone.
+Yes, small fixes (a note, a category, an amount) come back to the phones on their next sync. Don't change the ID column. For anything bigger, use the app.
 
 **Who can see my sheet?**
-Only you, plus anyone you share the sheet with. The **connection link**, though, can read and change your entries through the app (that's how Restore works), so treat it like a password and don't share it.
+Only you, plus anyone you share the sheet with. The **connection link**, though, can read and change your entries through the app, so treat it like a password: share it only with your own household.
 
 **I changed a card's statement day. What happens to old entries?**
 They're re-sorted into bills using the new day straight away.
@@ -259,7 +306,7 @@ They're re-sorted into bills using the new day straight away.
 History → tap the entry → change it → Save. To remove it, tap Delete twice.
 
 **The dot is red.**
-Open **Settings** to see the message. Usually the Web app was deployed with access other than **Anyone**, or the connection link was replaced. Get a new link with **Selavu → 2. Get connection link for the app** and connect again.
+Open **Settings** to see the message. Usually the Web app was deployed with access other than **Anyone**, the connection link was replaced, or the sheet script needs [updating](#11-updating-the-sheet-script). Get a new link with **Selavu → 2. Get connection link for the app** and connect again.
 
 ---
 
