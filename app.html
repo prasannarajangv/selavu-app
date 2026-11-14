@@ -859,8 +859,13 @@ function openConnect() {
     var msg = $('#cMsg', sh), go = $('#cGo', sh);
     $('#xClose', sh).addEventListener('click', closeSheet);
     go.addEventListener('click', function () {
-      var conn = parseConnLink($('#cLink', sh).value);
-      if (!conn) { msg.textContent = 'That isn\'t a connection link. It starts with https://script.google.com/macros/s/ and contains ?k='; msg.className = 'small up'; return; }
+      var raw = $('#cLink', sh).value.trim(), conn = parseConnLink(raw);
+      if (!conn) {
+        msg.textContent = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec\/?$/.test(raw)
+          ? 'This is the Web app URL, not the connection link yet. In your Google Sheet choose Selavu → 2. Get connection link for the app, paste this URL there, then copy the link it shows (it ends with ?k=…).'
+          : 'That isn\'t a connection link. Get it from your Google Sheet: Selavu → 2. Get connection link for the app. It starts with https://script.google.com/macros/s/ and ends with ?k=…';
+        msg.className = 'small up'; return;
+      }
       go.disabled = true; go.textContent = 'Checking…'; msg.textContent = ''; msg.className = 'small';
       api({ action: 'ping' }, conn).then(function (j) {
         closeSheet();
