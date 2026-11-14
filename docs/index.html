@@ -1,0 +1,982 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e6091">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Selavu">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Selavu</title>
+<style>
+/* Layout: phone-first app shell — sticky month header, scrolling cards, fixed bottom tab bar, bottom-sheet forms. */
+:root {
+  --bg: #f2f4f7; --surface: #ffffff; --surface-2: #f7f8fa; --fg: #141b24; --muted: #66717f; --line: #e1e5eb;
+  --accent: #1e6091; --accent-fg: #ffffff; --accent-soft: #e3eef7;
+  --good: #23855a; --warn: #b26a00; --bad: #c2392f; --warn-soft: #fdf1dc; --bad-soft: #fbe5e3;
+  --shadow: 0 1px 2px rgba(20,27,36,.06), 0 4px 16px rgba(20,27,36,.06);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --nav-h: 64px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1117; --surface: #161c24; --surface-2: #1c232d; --fg: #e6ebf1; --muted: #93a0ae; --line: #27303b;
+  --accent: #5fa8dc; --accent-fg: #0d1117; --accent-soft: #19293a;
+  --good: #5cc28f; --warn: #eaa846; --bad: #ef7d73; --warn-soft: #2c2415; --bad-soft: #321b1a;
+  --shadow: none; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d1117; --surface: #161c24; --surface-2: #1c232d; --fg: #e6ebf1; --muted: #93a0ae; --line: #27303b;
+  --accent: #5fa8dc; --accent-fg: #0d1117; --accent-soft: #19293a;
+  --good: #5cc28f; --warn: #eaa846; --bad: #ef7d73; --warn-soft: #2c2415; --bad-soft: #321b1a;
+  --shadow: none; color-scheme: dark }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font); margin: 0; font-variant-numeric: tabular-nums; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 12px 10px; }
+.top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 720px; margin: 0 auto; }
+.brand { font-weight: 700; font-size: 20px; letter-spacing: -.01em; }
+.month { display: flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
+.month button { border: 0; background: none; width: 34px; height: 34px; border-radius: 50%; font-size: 18px; color: var(--muted); }
+.month span { min-width: 92px; text-align: center; font-weight: 600; font-size: 14px; }
+
+main { max-width: 720px; margin: 0 auto; padding-block: 4px calc(var(--nav-h) + 88px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); display: grid; gap: 12px; min-width: 0; }
+.card h2 { font-size: 13px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.big { font-size: 34px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.kpi { background: var(--surface-2); border-radius: 10px; padding: 10px; display: grid; gap: 2px; min-width: 0; }
+.kpi b { font-size: 16px; }
+.kpi span { font-size: 12px; color: var(--muted); }
+.up { color: var(--bad); } .down { color: var(--good); }
+.meter { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--line); }
+.meter i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.meter.warn i { background: var(--warn); } .meter.bad i { background: var(--bad); }
+
+.cc { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.cc-head { display: flex; align-items: center; gap: 10px; }
+.swatch { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+.cc-name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.good { background: transparent; color: var(--good); border: 1px solid currentColor; }
+.cc-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+
+.donut-wrap { display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: center; }
+@media (max-width: 420px) { .donut-wrap { grid-template-columns: 1fr; justify-items: center; } .legend { width: 100%; } }
+.legend { display: grid; gap: 8px; min-width: 0; }
+.leg { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center; font-size: 14px; }
+.leg .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leg .meter { grid-column: 2 / 4; height: 5px; }
+svg text { fill: var(--muted); font: 11px var(--font); }
+svg .lbl-strong { fill: var(--fg); font-weight: 700; font-size: 18px; }
+
+.list { display: grid; }
+.day { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 14px 4px 6px; }
+.tx { display: grid; grid-template-columns: 36px 1fr auto; gap: 12px; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--line); background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; width: 100%; }
+.tx:last-child { border-bottom: 0; }
+.ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; }
+.tx .t1 { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx .t2 { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx .amt { font-weight: 600; text-align: right; }
+.tx .amt.other { color: var(--muted); font-style: italic; }
+.tx > div { min-width: 0; }
+
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+nav.tabs .inner { max-width: 720px; margin: 0 auto; height: var(--nav-h); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; }
+nav.tabs button { border: 0; background: none; display: grid; justify-items: center; gap: 3px; font-size: 11px; color: var(--muted); padding: 6px 0; }
+nav.tabs button[aria-current="page"] { color: var(--accent); font-weight: 600; }
+nav.tabs svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+nav.tabs .add { width: 56px; height: 56px; border-radius: 18px; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; margin: -22px auto 0; box-shadow: 0 6px 18px rgba(30,96,145,.35); }
+nav.tabs .add svg { width: 28px; height: 28px; stroke-width: 2.4; }
+
+.btn { border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 600; background: var(--accent); color: var(--accent-fg); }
+.btn.ghost { background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); }
+.btn.danger { background: var(--bad-soft); color: var(--bad); }
+.btn.block { width: 100%; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.btns .btn { flex: 1 1 140px; }
+.linkish { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 0; }
+
+.sheet-back { position: fixed; inset: 0; background: rgba(8,12,18,.45); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--surface); width: 100%; max-width: 560px; max-height: calc(100% - env(safe-area-inset-top, 0px) - 24px); overflow-y: auto;
+  border-radius: 20px 20px 0 0; padding-block: 10px calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; animation: up .22s ease-out; }
+@keyframes up { from { transform: translateY(30px); opacity: .6 } to { transform: none; opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
+.grab { width: 40px; height: 5px; border-radius: 9px; background: var(--line); margin: 0 auto; }
+.sheet h3 { margin: 0; font-size: 18px; }
+label.f { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.in { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); font-size: 16px; color: var(--fg); }
+.amount-in { font-size: 38px; font-weight: 700; text-align: center; border: 0; background: none; padding: 4px; width: 100%; color: var(--fg); }
+.amount-wrap { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 38px; font-weight: 700; color: var(--muted); border-bottom: 2px solid var(--line); }
+.amount-wrap:focus-within { border-color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 8px 12px; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.chip .swatch { width: 9px; height: 9px; border-radius: 50%; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { border: 0; background: none; border-radius: 8px; padding: 8px 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.daybtn { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; cursor: pointer; }
+.daybtn[aria-expanded="true"] { border-color: var(--accent); }
+.daygrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.daygrid button { aspect-ratio: 1; min-height: 36px; border: 0; border-radius: 10px; background: var(--surface); font-weight: 600; font-size: 15px; color: var(--fg); padding: 0; }
+.daygrid button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.hint { font-size: 12px; color: var(--muted); font-weight: 400; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--nav-h) + 24px + env(safe-area-inset-bottom, 0px)); z-index: 30;
+  background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; max-width: calc(100% - 32px); text-align: center; }
+.banner { background: var(--warn-soft); color: var(--fg); border-radius: 12px; padding: 10px 14px; font-size: 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.empty { text-align: center; padding: 28px 12px; display: grid; gap: 10px; justify-items: center; }
+.empty p { margin: 0; max-width: 34ch; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.set-row:last-child { border-bottom: 0; }
+.set-row > div { min-width: 0; }
+.budget-grid { display: grid; grid-template-columns: 1fr 120px; gap: 8px 12px; align-items: center; }
+.budget-grid .in { padding: 8px 10px; font-size: 15px; }
+.stmt { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: center; }
+.stmt:last-child { border-bottom: 0; }
+.toggle { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; }
+.toggle[aria-pressed="true"] { background: var(--good); border-color: var(--good); color: var(--surface); }
+code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+</style>
+
+<header class="top gutter">
+  <div class="top-row">
+    <div class="brand">Selavu</div>
+    <div class="month" id="monthNav">
+      <button type="button" id="prevM" aria-label="Previous month">‹</button>
+      <span id="monthLbl"></span>
+      <button type="button" id="nextM" aria-label="Next month">›</button>
+    </div>
+  </div>
+</header>
+
+<main class="gutter" id="view"></main>
+
+<nav class="tabs" aria-label="Sections">
+  <div class="inner">
+    <button type="button" data-tab="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+    <button type="button" data-tab="history"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>History</button>
+    <button type="button" id="addBtn" aria-label="Add expense"><span class="add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></button>
+    <button type="button" data-tab="bills"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg>Bills</button>
+    <button type="button" data-tab="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+  </div>
+</nav>
+
+<div id="sheetRoot"></div>
+<div id="toastRoot" aria-live="polite"></div>
+
+<script>
+(function () {
+'use strict';
+
+// ---------- Constants ----------
+var STORE = 'selavu.v1';
+var CATS = ['Food & Dining', 'Groceries', 'Fuel', 'Travel', 'Shopping', 'Bills & Utilities', 'Rent & Housing', 'Home & Repairs',
+  'Health', 'Subscriptions', 'EMI & Loans', 'Entertainment', 'Gifts & Functions', 'Sports & Fitness', 'Personal', 'Savings & Investments', 'Other'];
+var CAT_COLORS = ['#e07b39', '#3a9d6e', '#c9473d', '#2f8fc2', '#8a5cc2', '#d4a72c', '#5b6fd6', '#a07040', '#d0587e', '#3aa3a0',
+  '#7d8a99', '#b85cb0', '#e09a2f', '#4d9b3a', '#c77d64', '#2f6fb3', '#9aa4b0'];
+var KINDS = ['Expense', 'Transfer', 'Lent', 'Received'];
+var CARD_TYPES = ['Credit', 'Debit', 'UPI', 'Cash'];
+var CARD_COLORS = ['#2f6fb3', '#e07b39', '#3a9d6e', '#8a5cc2', '#c9473d', '#c99a1c', '#3b9fb5', '#7d8a99'];
+// Free text (from imports or a Shortcut) → [kind, category]
+var MAP = { 'outside food': ['Expense', 'Food & Dining'], 'zomato': ['Expense', 'Food & Dining'], 'swiggy': ['Expense', 'Food & Dining'],
+  'snacks erode': ['Expense', 'Food & Dining'], 'zepto': ['Expense', 'Groceries'], 'blinkit': ['Expense', 'Groceries'],
+  'vegetables': ['Expense', 'Groceries'], 'chicken': ['Expense', 'Groceries'], 'market purchase': ['Expense', 'Groceries'],
+  'emi': ['Expense', 'EMI & Loans'], 'rent': ['Expense', 'Rent & Housing'], 'rental agreement': ['Expense', 'Rent & Housing'],
+  'bathroom pipe': ['Expense', 'Home & Repairs'], 'tv installation': ['Expense', 'Home & Repairs'], 'mattress purchase': ['Expense', 'Shopping'],
+  'dress purchase': ['Expense', 'Shopping'], 'phone temper': ['Expense', 'Shopping'], 'amazon': ['Expense', 'Shopping'], 'flipkart': ['Expense', 'Shopping'],
+  'decathlon purchase': ['Expense', 'Sports & Fitness'], 'sports': ['Expense', 'Sports & Fitness'], 'pangu marriage': ['Expense', 'Gifts & Functions'],
+  'malli poo': ['Expense', 'Personal'], 'chit amount': ['Transfer', 'Savings & Investments'], 'srikanth transfer': ['Transfer', 'Other'],
+  'lent to friend': ['Lent', 'Other'], 'received amount': ['Received', 'Other'], 'reimbursement received': ['Received', 'Other'],
+  'cash / atm': ['Transfer', 'Other'], 'cash': ['Transfer', 'Other'], 'atm': ['Transfer', 'Other'] };
+
+var inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// ---------- State ----------
+var S = load();
+var ui = { tab: 'home', ym: ymOf(new Date()), q: '', cardFilter: '' };
+
+function blank() { return { v: 1, cards: [], tx: [], budgets: {}, paid: {}, lastCard: null, sample: false }; }
+function load() {
+  try {
+    var raw = localStorage.getItem(STORE);
+    if (raw) { var s = JSON.parse(raw); if (s && s.v === 1) return Object.assign(blank(), s); }
+  } catch (e) { /* storage blocked: run in memory */ }
+  return blank();
+}
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) { toast('Could not save on this device. Export a backup from Settings.'); }
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+// ---------- Dates & cycles ----------
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function ymOf(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1); }
+function ymAdd(ym, n) { var p = ym.split('-'); return ymOf(new Date(+p[0], +p[1] - 1 + n, 1)); }
+function ymLabel(ym) { var p = ym.split('-'); return MON[+p[1] - 1] + ' ' + p[0]; }
+function ymShort(ym) { var p = ym.split('-'); return MON[+p[1] - 1] + ' ' + p[0].slice(2); }
+function parseLocal(s) { var m = /^(\d{4})-(\d\d)-(\d\d)(?:T(\d\d):(\d\d))?/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) : new Date(NaN); }
+function toLocal(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function dayLabel(d) { return d.getDate() + ' ' + MON[d.getMonth()]; }
+function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+function today0() { var t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+
+function cardById(id) { for (var i = 0; i < S.cards.length; i++) if (S.cards[i].id === id) return S.cards[i]; return null; }
+function stmtDay(card) { return card && card.type === 'Credit' ? (+card.stmtDay || 0) : 0; }
+
+// Bill month = month the statement is made. Statement-day purchases go to the next cycle.
+function billMonthFor(card, d) {
+  var s = stmtDay(card);
+  if (!s) return ymOf(d);
+  return ymOf(new Date(d.getFullYear(), d.getMonth() + (d.getDate() >= s ? 1 : 0), 1));
+}
+function billMonth(t) { return t._bm || (t._bm = billMonthFor(cardById(t.card), parseLocal(t.date))); }
+function clearBm() { S.tx.forEach(function (t) { delete t._bm; }); }
+// Statement made in month `ym` for a credit card.
+function statement(card, ym) {
+  var p = ym.split('-'), y = +p[0], m = +p[1] - 1, s = stmtDay(card);
+  var date = new Date(y, m, s);
+  return { ym: ym, start: new Date(y, m - 1, s), end: new Date(y, m, s - 1), date: date, due: dueDate(card, date) };
+}
+// First occurrence of the due day after the statement date (clamped to short months).
+// Older cards saved "days after statement" instead; keep honouring that.
+function dueDate(card, date) {
+  var d = +card.dueDay;
+  if (d) {
+    var y = date.getFullYear(), m = date.getMonth() + (d <= date.getDate() ? 1 : 0);
+    return new Date(y, m, Math.min(d, new Date(y, m + 1, 0).getDate()));
+  }
+  return card.dueDays ? addDays(date, +card.dueDays) : null;
+}
+var counts = function (t) { return t.kind !== 'Received'; };
+
+// ---------- Queries ----------
+function sum(list) { return list.reduce(function (a, t) { return a + (+t.amount || 0); }, 0); }
+function inMonth(ym) { return S.tx.filter(function (t) { return billMonth(t) === ym; }); }
+function expenses(list) { return list.filter(function (t) { return t.kind === 'Expense'; }); }
+function chargedOn(cardId, ym) { return sum(S.tx.filter(function (t) { return t.card === cardId && billMonth(t) === ym && counts(t); })); }
+
+// ---------- Rendering helpers ----------
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function catColor(c) { var i = CATS.indexOf(c); return i < 0 ? '#9aa4b0' : CAT_COLORS[i]; }
+function initials(s) { return esc(String(s || '?').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase() || '?'); }
+function $(sel, root) { return (root || document).querySelector(sel); }
+function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+var toastTimer;
+function toast(msg) {
+  var r = $('#toastRoot');
+  r.innerHTML = '<div class="toast">' + esc(msg) + '</div>';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { r.innerHTML = ''; }, 3200);
+}
+
+// ---------- Charts (SVG) ----------
+function donut(parts, total) {
+  var r = 56, c = 2 * Math.PI * r, off = 0;
+  var segs = parts.map(function (p) {
+    var len = total ? p.value / total * c : 0;
+    var s = '<circle cx="75" cy="75" r="' + r + '" fill="none" stroke="' + p.color + '" stroke-width="20" stroke-dasharray="' +
+      Math.max(len - 1.5, 0.01).toFixed(2) + ' ' + c.toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) + '" transform="rotate(-90 75 75)"/>';
+    off += len; return s;
+  }).join('');
+  return '<svg viewBox="0 0 150 150" width="150" height="150" role="img" aria-label="Spending by category">' +
+    '<circle cx="75" cy="75" r="' + r + '" fill="none" stroke="var(--surface-2)" stroke-width="20"/>' + segs +
+    '<text x="75" y="72" text-anchor="middle" class="lbl-strong">' + esc(compact(total)) + '</text>' +
+    '<text x="75" y="90" text-anchor="middle">spent</text></svg>';
+}
+function compact(n) {
+  var t = function (x) { return String(+x.toFixed(1)); };
+  return n >= 100000 ? '₹' + t(n / 100000) + 'L' : n >= 1000 ? '₹' + t(n / 1000) + 'k' : inr.format(n);
+}
+function niceMax(v) {
+  if (v <= 0) return 1000;
+  var p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p;
+  var steps = [1, 1.5, 2, 3, 4, 5, 6, 8, 10];
+  for (var i = 0; i < steps.length; i++) if (f <= steps[i]) return steps[i] * p;
+  return 10 * p;
+}
+
+function stackedBars(cols, series, height) {
+  // cols: [{label, values:[...per series]}], series: [{name,color}]
+  var W = 640, H = height || 200, L = 44, B = 22, T = 8, R = 6;
+  var max = niceMax(Math.max.apply(null, cols.map(function (c) { return c.values.reduce(function (a, b) { return a + b; }, 0); }).concat([0])));
+  var bw = (W - L - R) / cols.length, inner = Math.min(bw * 0.62, 38);
+  var y = function (v) { return T + (H - T - B) * (1 - v / max); };
+  var out = '';
+  [0, 0.5, 1].forEach(function (f) {
+    var yy = y(max * f);
+    out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--line)" stroke-width="1"/>' +
+      '<text x="' + (L - 6) + '" y="' + (yy + 4) + '" text-anchor="end">' + esc(compact(max * f)) + '</text>';
+  });
+  cols.forEach(function (c, i) {
+    var x = L + i * bw + (bw - inner) / 2, acc = 0;
+    c.values.forEach(function (v, j) {
+      if (!v) return;
+      var y1 = y(acc + v), y0 = y(acc);
+      out += '<rect x="' + x.toFixed(1) + '" y="' + y1.toFixed(1) + '" width="' + inner.toFixed(1) + '" height="' + Math.max(y0 - y1, 0.5).toFixed(1) +
+        '" fill="' + series[j].color + '"' + (c.dim ? ' opacity=".45"' : '') + '><title>' + esc(c.label + ' · ' + series[j].name + ': ' + inr.format(v)) + '</title></rect>';
+      acc += v;
+    });
+    if (c.label) out += '<text x="' + (L + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle"' + (c.strong ? ' style="fill:var(--fg);font-weight:600"' : '') + '>' + esc(c.label) + '</text>';
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Bar chart">' + out + '</svg>';
+}
+
+// ---------- Views ----------
+function render() {
+  $('#monthLbl').textContent = ymLabel(ui.ym);
+  $('#monthNav').hidden = !(ui.tab === 'home' || ui.tab === 'history');
+  $$('nav.tabs [data-tab]').forEach(function (b) { b.setAttribute('aria-current', b.dataset.tab === ui.tab ? 'page' : 'false'); });
+  var v = $('#view');
+  v.innerHTML = ({ home: viewHome, history: viewHistory, bills: viewBills, settings: viewSettings })[ui.tab]();
+  bindView(v);
+}
+
+function sampleBanner() {
+  return S.sample ? '<div class="banner"><span>You are looking at <b>sample data</b>.</span><button type="button" class="linkish" data-act="clear-sample">Clear sample &amp; start fresh</button></div>' : '';
+}
+
+function viewHome() {
+  if (!S.cards.length) {
+    return '<section class="card empty"><div class="big" style="font-size:26px">Track every card, cycle by cycle</div>' +
+      '<p class="muted">Add your cards once: credit cards with their statement day, plus debit, UPI or cash. Then log each payment in one tap.</p>' +
+      '<div class="btns" style="width:100%"><button type="button" class="btn" data-act="new-card">Add my first card</button>' +
+      '<button type="button" class="btn ghost" data-act="sample">Try with sample data</button></div></section>';
+  }
+  var ym = ui.ym, now = ymOf(new Date());
+  var month = inMonth(ym), exp = expenses(month), spent = sum(exp);
+  var last = sum(expenses(inMonth(ymAdd(ym, -1))));
+  var change = last ? (spent / last - 1) : null;
+  var p = ym.split('-'), dim = new Date(+p[0], +p[1], 0).getDate();
+  var days = ym === now ? new Date().getDate() : dim;
+  var budgetTotal = CATS.reduce(function (a, c) { return a + (+S.budgets[c] || 0); }, 0);
+
+  var h = sampleBanner();
+  h += '<section class="card"><div class="row"><h2>Spent in ' + esc(ymLabel(ym)) + ' bills</h2>' +
+    (ym === now ? '<span class="pill">This month</span>' : ym > now ? '<span class="pill warn">Upcoming</span>' : '<span class="pill good">Closed</span>') + '</div>' +
+    '<div class="big">' + inr.format(spent) + '</div>' +
+    (budgetTotal ? meter(spent, budgetTotal) + '<div class="small muted">' + inr.format(Math.max(budgetTotal - spent, 0)) + ' left of ' + inr.format(budgetTotal) + ' budget</div>' : '') +
+    '<div class="kpis"><div class="kpi"><b>' + inr.format(last) + '</b><span>Last month</span></div>' +
+    '<div class="kpi"><b class="' + (change == null ? '' : change > 0 ? 'up' : 'down') + '">' + (change == null ? '–' : (change > 0 ? '+' : '') + Math.round(change * 100) + '%') + '</b><span>Change</span></div>' +
+    '<div class="kpi"><b>' + inr.format(days ? spent / days : 0) + '</b><span>Per day</span></div></div></section>';
+
+  // Cards for this bill month
+  var cc = S.cards.filter(function (c) { return stmtDay(c); });
+  var other = S.cards.filter(function (c) { return !stmtDay(c); });
+  if (S.cards.length) {
+    h += '<section class="card"><h2>Cards · ' + esc(ymLabel(ym)) + '</h2>';
+    var t0 = today0();
+    cc.forEach(function (c) {
+      var st = statement(c, ym), amt = chargedOn(c.id, ym), open = st.date > t0, key = c.id + '|' + ym, paid = S.paid[key];
+      var status;
+      if (st.start > t0) status = '<span class="pill">Not started</span>';
+      else if (open) status = '<span class="pill">' + Math.round((st.date - t0) / 864e5) + ' days to statement</span>';
+      else if (paid) status = '<span class="pill good">Paid</span>';
+      else if (st.due && (st.due - t0) / 864e5 <= 3) status = '<span class="pill bad">' + (st.due < t0 ? 'Overdue' : 'Due ' + dayLabel(st.due)) + '</span>';
+      else status = '<span class="pill warn">' + (st.due ? 'Due ' + dayLabel(st.due) : 'Statement out') + '</span>';
+      h += '<div class="cc"><div class="cc-head"><span class="swatch" style="background:' + c.color + '"></span><span class="cc-name">' + esc(c.name) + '</span>' + status + '</div>' +
+        '<div class="row"><b style="font-size:20px">' + inr.format(amt) + '</b><span class="small muted">' + dayLabel(st.start) + ' – ' + dayLabel(st.end) + '</span></div>' +
+        (c.limit ? meter(amt, +c.limit) + '<div class="cc-meta"><span>' + Math.round(amt / c.limit * 100) + '% of ' + inr.format(+c.limit) + ' limit</span></div>' : '') + '</div>';
+    });
+    other.forEach(function (c) {
+      var amt = chargedOn(c.id, ym);
+      h += '<div class="cc"><div class="cc-head"><span class="swatch" style="background:' + c.color + '"></span><span class="cc-name">' + esc(c.name) + '</span><span class="pill">' + esc(c.type) + '</span></div>' +
+        '<div class="row"><b style="font-size:20px">' + inr.format(amt) + '</b><span class="small muted">Calendar month</span></div></div>';
+    });
+    h += '</section>';
+  }
+
+  // Categories
+  var byCat = {};
+  exp.forEach(function (t) { byCat[t.category || 'Other'] = (byCat[t.category || 'Other'] || 0) + (+t.amount || 0); });
+  var cats = Object.keys(byCat).map(function (k) { return { name: k, value: byCat[k], color: catColor(k) }; }).sort(function (a, b) { return b.value - a.value; });
+  h += '<section class="card"><h2>Where it went</h2>';
+  if (!cats.length) h += '<p class="muted small" style="margin:0">No spending in this bill month yet. Tap + to log one.</p>';
+  else {
+    h += '<div class="donut-wrap">' + donut(cats, spent) + '<div class="legend">' + cats.map(function (c) {
+      var b = +S.budgets[c.name] || 0;
+      return '<div class="leg"><span class="swatch" style="background:' + c.color + '"></span><span class="nm">' + esc(c.name) + '</span><b>' + inr.format(c.value) + '</b>' +
+        (b ? meter(c.value, b) : '') + '</div>';
+    }).join('') + '</div></div>';
+  }
+  h += '</section>';
+
+  // 6-month trend by card
+  var series = S.cards.map(function (c) { return { name: c.name, color: c.color }; });
+  var cols = [];
+  for (var i = -5; i <= 0; i++) {
+    var m = ymAdd(ym, i), list = expenses(inMonth(m));
+    cols.push({ label: ymShort(m), strong: i === 0, values: S.cards.map(function (c) { return sum(list.filter(function (t) { return t.card === c.id; })); }) });
+  }
+  h += '<section class="card"><h2>Last 6 months by card</h2>' + stackedBars(cols, series) +
+    '<div class="chips">' + series.map(function (s) { return '<span class="small muted" style="display:inline-flex;gap:6px;align-items:center"><span class="swatch" style="background:' + s.color + '"></span>' + esc(s.name) + '</span>'; }).join('') + '</div></section>';
+
+  // Daily (calendar month)
+  var daily = [];
+  for (var d = 1; d <= dim; d++) {
+    var dd = new Date(+p[0], +p[1] - 1, d);
+    var v = sum(S.tx.filter(function (t) { if (t.kind !== 'Expense') return false; var x = parseLocal(t.date); return x.getFullYear() === dd.getFullYear() && x.getMonth() === dd.getMonth() && x.getDate() === d; }));
+    daily.push({ label: (d === 1 || d % 5 === 0) ? String(d) : '', values: [v], dim: dd > new Date() });
+  }
+  h += '<section class="card"><h2>Daily spend in ' + MON[+p[1] - 1] + ' (by date)</h2>' + stackedBars(daily, [{ name: 'Spent', color: 'var(--accent)' }], 160) + '</section>';
+
+  // Not spending
+  var tr = sum(month.filter(function (t) { return t.kind === 'Transfer'; }));
+  var lent = sum(S.tx.filter(function (t) { return t.kind === 'Lent'; })), back = sum(S.tx.filter(function (t) { return t.kind === 'Received'; }));
+  if (tr || lent || back) {
+    h += '<section class="card"><h2>Not counted as spending</h2>' +
+      '<div class="kpis"><div class="kpi"><b>' + inr.format(tr) + '</b><span>Transfers this month</span></div>' +
+      '<div class="kpi"><b>' + inr.format(lent) + '</b><span>Lent (all time)</span></div>' +
+      '<div class="kpi"><b>' + inr.format(Math.max(lent - back, 0)) + '</b><span>Still to get back</span></div></div></section>';
+  }
+  return h;
+}
+
+function meter(v, max) {
+  var f = max ? v / max : 0;
+  return '<div class="meter' + (f >= 1 ? ' bad' : f >= 0.8 ? ' warn' : '') + '"><i style="width:' + Math.min(f * 100, 100).toFixed(1) + '%"></i></div>';
+}
+
+function viewHistory() {
+  if (!S.cards.length) return viewHome();
+  var list = inMonth(ui.ym).filter(function (t) {
+    if (ui.cardFilter && t.card !== ui.cardFilter) return false;
+    if (!ui.q) return true;
+    var c = cardById(t.card);
+    return (t.note + ' ' + t.category + ' ' + t.kind + ' ' + (c ? c.name : '') + ' ' + t.amount).toLowerCase().indexOf(ui.q.toLowerCase()) >= 0;
+  }).sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+  var h = sampleBanner() + '<section class="card"><div class="two"><input class="in" id="q" type="search" placeholder="Search note, amount…" value="' + esc(ui.q) + '">' +
+    '<select class="in" id="cardFilter"><option value="">All cards</option>' + S.cards.map(function (c) { return '<option value="' + c.id + '"' + (ui.cardFilter === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="row small muted"><span>' + list.length + ' entries in ' + esc(ymLabel(ui.ym)) + ' bills</span><b>' + inr.format(sum(expenses(list))) + ' spent</b></div>';
+  if (!list.length) return h + '<p class="muted small" style="margin:0">Nothing here. Credit card purchases show under the month their statement is made.</p></section>';
+  var lastDay = '', out = '<div class="list">';
+  list.forEach(function (t) {
+    var d = parseLocal(t.date), key = d.toDateString();
+    if (key !== lastDay) { out += '<div class="day">' + d.getDate() + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear() + '</div>'; lastDay = key; }
+    var c = cardById(t.card), isExp = t.kind === 'Expense';
+    out += '<button type="button" class="tx" data-edit="' + t.id + '"><span class="ico" style="background:' + (isExp ? catColor(t.category) : '#7d8a99') + '">' + initials(isExp ? t.category : t.kind) + '</span>' +
+      '<div><div class="t1">' + esc(t.note || (isExp ? t.category : t.kind)) + '</div><div class="t2">' + esc((c ? c.name : 'Unknown card') + ' · ' + (isExp ? t.category : t.kind) + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes())) + '</div></div>' +
+      '<div class="amt' + (isExp ? '' : ' other') + '">' + (t.kind === 'Received' ? '+' : '') + inr.format(+t.amount) + '</div></button>';
+  });
+  return h + out + '</div></section>';
+}
+
+function viewBills() {
+  var cc = S.cards.filter(function (c) { return stmtDay(c); });
+  if (!cc.length) return '<section class="card empty"><p class="muted">Add a credit card with its statement day in Settings to see bills here.</p><button type="button" class="btn" data-act="new-card">Add a credit card</button></section>';
+  var t0 = today0(), h = sampleBanner();
+  cc.forEach(function (c) {
+    var dates = S.tx.filter(function (t) { return t.card === c.id; }).map(function (t) { return billMonth(t); });
+    var open = billMonthFor(c, new Date());
+    var first = dates.length ? dates.reduce(function (a, b) { return a < b ? a : b; }) : open;
+    h += '<section class="card"><div class="cc-head"><span class="swatch" style="background:' + c.color + '"></span><span class="cc-name">' + esc(c.name) + '</span><span class="small muted">Statement on ' + ordinal(c.stmtDay) + '</span></div>';
+    for (var m = open; m >= first; m = ymAdd(m, -1)) {
+      var st = statement(c, m), amt = chargedOn(c.id, m), key = c.id + '|' + m, paid = !!S.paid[key], isOpen = st.date > t0;
+      var dueSoon = !paid && !isOpen && st.due && (st.due - t0) / 864e5 <= 3;
+      h += '<div class="stmt"><div><b>' + esc(ymLabel(m)) + '</b> <span class="small muted">' + dayLabel(st.start) + ' – ' + dayLabel(st.end) + '</span>' +
+        '<div class="small ' + (dueSoon ? 'up' : 'muted') + '">' + (isOpen ? 'Open cycle · statement ' + dayLabel(st.date) : st.due ? 'Due ' + dayLabel(st.due) + (dueSoon ? (st.due < t0 ? ' · overdue' : ' · due soon') : '') : 'Set the payment due day on the card (Settings) to see the due date') + '</div></div>' +
+        '<div style="display:grid;gap:6px;justify-items:end"><b>' + inr.format(amt) + '</b>' +
+        (isOpen ? '<span class="pill">Open</span>' : '<button type="button" class="toggle" data-paid="' + key + '" aria-pressed="' + paid + '">' + (paid ? 'Paid' : 'Mark paid') + '</button>') + '</div></div>';
+    }
+    h += '</section>';
+  });
+  return h;
+}
+function ordinal(n) { n = +n; var s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+
+function viewSettings() {
+  var h = '<section class="card"><div class="row"><h2>Your cards</h2><button type="button" class="linkish" data-act="new-card">+ Add card</button></div>';
+  if (!S.cards.length) h += '<p class="muted small" style="margin:0">No cards yet.</p>';
+  S.cards.forEach(function (c) {
+    h += '<div class="set-row"><div class="cc-head" style="min-width:0"><span class="swatch" style="background:' + c.color + '"></span><div style="min-width:0"><div class="cc-name">' + esc(c.name) + '</div>' +
+      '<div class="small muted">' + esc(c.type) + (stmtDay(c) ? ' · statement ' + ordinal(c.stmtDay) + (c.dueDay ? ' · due ' + ordinal(c.dueDay) : c.dueDays ? ' · due +' + c.dueDays + ' days' : '') : '') + (c.limit ? ' · limit ' + inr.format(+c.limit) : '') + '</div></div></div>' +
+      '<button type="button" class="linkish" data-card="' + c.id + '">Edit</button></div>';
+  });
+  h += '</section>';
+
+  h += '<section class="card"><h2>Monthly budgets</h2><p class="small muted" style="margin:0">Optional. Leave blank for no budget. Bars turn amber at 80% and red at 100%.</p><div class="budget-grid">' +
+    CATS.map(function (c, i) { return '<label for="b' + i + '" style="display:flex;gap:8px;align-items:center"><span class="swatch" style="background:' + CAT_COLORS[i] + '"></span>' + esc(c) + '</label>' +
+      '<input class="in" id="b' + i + '" data-budget="' + esc(c) + '" inputmode="numeric" placeholder="₹" value="' + (S.budgets[c] || '') + '">'; }).join('') + '</div></section>';
+
+  h += '<section class="card"><h2>Your data</h2><p class="small muted" style="margin:0">Everything is stored only on this phone. Export a backup now and then, and before you change phones.</p>' +
+    '<div class="btns"><button type="button" class="btn" data-act="xlsx">Export to Excel</button><button type="button" class="btn ghost" data-act="csv">Export CSV</button></div>' +
+    '<div class="btns"><button type="button" class="btn ghost" data-act="backup">Save backup file</button><button type="button" class="btn ghost" data-act="restore">Restore backup</button></div>' +
+    '<button type="button" class="btn ghost block" data-act="import">Import from a spreadsheet (CSV)</button>' +
+    '<input type="file" id="fileIn" accept=".json,.csv,text/csv,application/json" hidden>' +
+    '<button type="button" class="btn danger block" data-act="reset">Delete all data on this phone</button></section>' +
+    '<p class="small muted" style="text-align:center;margin:4px 0">Selavu · works offline · ' + S.tx.length + ' entries · ' + S.cards.length + ' cards</p>';
+  return h;
+}
+
+// ---------- Events ----------
+function bindView(v) {
+  $$('[data-act]', v).forEach(function (b) { b.addEventListener('click', function () { actions[b.dataset.act](); }); });
+  $$('[data-edit]', v).forEach(function (b) { b.addEventListener('click', function () { openExpense(S.tx.filter(function (t) { return t.id === b.dataset.edit; })[0]); }); });
+  $$('[data-card]', v).forEach(function (b) { b.addEventListener('click', function () { openCard(cardById(b.dataset.card)); }); });
+  $$('[data-paid]', v).forEach(function (b) { b.addEventListener('click', function () {
+    var k = b.dataset.paid; if (S.paid[k]) delete S.paid[k]; else S.paid[k] = toLocal(new Date()); save(); render(); }); });
+  $$('[data-budget]', v).forEach(function (i) { i.addEventListener('change', function () {
+    var n = Math.round(+String(i.value).replace(/[^\d.]/g, '')); if (n > 0) S.budgets[i.dataset.budget] = n; else delete S.budgets[i.dataset.budget]; i.value = S.budgets[i.dataset.budget] || ''; save(); toast('Budget saved'); }); });
+  var q = $('#q', v); if (q) q.addEventListener('input', function () { ui.q = q.value; var pos = q.selectionStart; render(); var n = $('#q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} });
+  var cf = $('#cardFilter', v); if (cf) cf.addEventListener('change', function () { ui.cardFilter = cf.value; render(); });
+  var fi = $('#fileIn', v); if (fi) fi.addEventListener('change', function () { if (fi.files[0]) readFile(fi.files[0]); fi.value = ''; });
+}
+
+$$('nav.tabs [data-tab]').forEach(function (b) { b.addEventListener('click', function () { ui.tab = b.dataset.tab; render(); window.scrollTo(0, 0); }); });
+$('#addBtn').addEventListener('click', function () { openExpense(); });
+$('#prevM').addEventListener('click', function () { ui.ym = ymAdd(ui.ym, -1); render(); });
+$('#nextM').addEventListener('click', function () { ui.ym = ymAdd(ui.ym, 1); render(); });
+
+// ---------- Sheets (forms) ----------
+function openSheet(html, mount) {
+  var root = $('#sheetRoot');
+  root.innerHTML = '<div class="sheet-back"><div class="sheet gutter" role="dialog" aria-modal="true"><div class="grab"></div>' + html + '</div></div>';
+  var back = $('.sheet-back', root);
+  back.addEventListener('click', function (e) { if (e.target === back) closeSheet(); });
+  document.addEventListener('keydown', escClose);
+  mount($('.sheet', root));
+}
+function escClose(e) { if (e.key === 'Escape') closeSheet(); }
+function closeSheet() { $('#sheetRoot').innerHTML = ''; document.removeEventListener('keydown', escClose); }
+
+function openExpense(t, prefill) {
+  if (!S.cards.length) { toast('Add a card first'); openCard(); return; }
+  var edit = !!t;
+  prefill = prefill || {};
+  t = t ? Object.assign({}, t) : { id: uid(), date: toLocal(new Date()), card: (cardById(S.lastCard) || S.cards[0]).id, amount: '', kind: 'Expense', category: '', note: '' };
+  if (prefill.amount) t.amount = prefill.amount;
+  if (prefill.card) t.card = prefill.card;
+  if (prefill.category) t.category = prefill.category;
+  if (prefill.kind) t.kind = prefill.kind;
+  if (prefill.note) t.note = prefill.note;
+  var html = '<div class="row"><h3>' + (edit ? 'Edit entry' : 'Log a payment') + '</h3><button type="button" class="linkish" id="xClose">Cancel</button></div>' +
+    '<div class="amount-wrap"><span>₹</span><input class="amount-in" id="fAmt" inputmode="decimal" placeholder="0" value="' + esc(t.amount) + '" aria-label="Amount in rupees" autocomplete="off"></div>' +
+    '<div class="f" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Paid with</span><div class="chips" id="fCards">' +
+    S.cards.map(function (c) { return '<button type="button" class="chip" data-v="' + c.id + '" aria-pressed="' + (t.card === c.id) + '"><span class="swatch" style="background:' + c.color + '"></span>' + esc(c.name) + '</button>'; }).join('') + '</div></div>' +
+    '<div class="seg" id="fKind">' + KINDS.map(function (k) { return '<button type="button" data-v="' + k + '" aria-pressed="' + (t.kind === k) + '">' + k + '</button>'; }).join('') + '</div>' +
+    '<div id="fCatWrap" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Category</span><div class="chips" id="fCats">' +
+    CATS.map(function (c, i) { return '<button type="button" class="chip" data-v="' + esc(c) + '" aria-pressed="' + (t.category === c) + '"><span class="swatch" style="background:' + CAT_COLORS[i] + '"></span>' + esc(c) + '</button>'; }).join('') + '</div></div>' +
+    '<label class="f" for="fNote">Note <span class="hint">(shop, person, item; optional)</span><input class="in" id="fNote" value="' + esc(t.note) + '" autocomplete="off"></label>' +
+    '<label class="f" for="fDate">When<input class="in" id="fDate" type="datetime-local" value="' + esc(t.date) + '"></label>' +
+    '<div class="small muted" id="fCycle"></div>' +
+    '<button type="button" class="btn block" id="fSave">' + (edit ? 'Save changes' : 'Save') + '</button>' +
+    (edit ? '<button type="button" class="btn danger block" id="fDel">Delete entry</button>' : '');
+  openSheet(html, function (sh) {
+    var amt = $('#fAmt', sh);
+    setTimeout(function () { if (!edit) amt.focus(); }, 60);
+    var pick = function (wrap, key, after) {
+      $$('button', wrap).forEach(function (b) { b.addEventListener('click', function () {
+        $$('button', wrap).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); });
+        b.setAttribute('aria-pressed', 'true'); t[key] = b.dataset.v; if (after) after(); }); });
+    };
+    var cycleNote = function () {
+      var c = cardById(t.card), d = parseLocal($('#fDate', sh).value);
+      if (!c || isNaN(d)) { $('#fCycle', sh).textContent = ''; return; }
+      var bm = billMonthFor(c, d);
+      $('#fCycle', sh).textContent = stmtDay(c) ? 'Goes on the ' + ymLabel(bm) + ' statement (' + dayLabel(statement(c, bm).start) + ' – ' + dayLabel(statement(c, bm).end) + ')' : 'Counts in ' + ymLabel(bm);
+    };
+    var kindUi = function () { $('#fCatWrap', sh).hidden = t.kind !== 'Expense'; };
+    pick($('#fCards', sh), 'card', cycleNote); pick($('#fKind', sh), 'kind', kindUi); pick($('#fCats', sh), 'category');
+    kindUi(); cycleNote();
+    $('#fDate', sh).addEventListener('change', cycleNote);
+    $('#xClose', sh).addEventListener('click', closeSheet);
+    $('#fSave', sh).addEventListener('click', function () {
+      var n = +String(amt.value).replace(/[₹,\s]/g, '');
+      if (!(n > 0)) { toast('Type the amount first'); amt.focus(); return; }
+      var d = parseLocal($('#fDate', sh).value);
+      if (isNaN(d)) { toast('Pick a valid date'); return; }
+      t.amount = Math.round(n * 100) / 100;
+      t.date = toLocal(d);
+      t.note = $('#fNote', sh).value.trim();
+      if (t.kind === 'Expense' && !t.category) t.category = guessCategory(t.note) || 'Other';
+      if (t.kind !== 'Expense') t.category = '';
+      delete t._bm;
+      var i = S.tx.map(function (x) { return x.id; }).indexOf(t.id);
+      if (i >= 0) S.tx[i] = t; else S.tx.push(t);
+      S.lastCard = t.card;
+      save(); closeSheet();
+      var c = cardById(t.card), bm = billMonth(t);
+      ui.ym = bm; render();
+      toast(inr.format(t.amount) + ' saved · ' + c.name + ' ' + ymShort(bm) + ' total ' + inr.format(chargedOn(c.id, bm)));
+    });
+    if (edit) $('#fDel', sh).addEventListener('click', function () {
+      var b = $('#fDel', sh);
+      if (b.dataset.sure) { S.tx = S.tx.filter(function (x) { return x.id !== t.id; }); save(); closeSheet(); render(); toast('Entry deleted'); }
+      else { b.dataset.sure = '1'; b.textContent = 'Tap again to delete'; }
+    });
+  });
+}
+
+var CAL_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;flex:none;color:var(--muted)"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+// Month-style grid of day numbers (1..max) for picking "day of month".
+function dayGrid(id, max) {
+  var h = '<div class="daygrid" id="' + id + '" hidden role="group" aria-label="Day of month">';
+  for (var d = 1; d <= max; d++) h += '<button type="button" data-d="' + d + '" aria-pressed="false">' + d + '</button>';
+  return h + (max === 28 ? '<p class="hint" style="grid-column:1/-1;margin:2px 0 0">Banks set statement days between 1 and 28.</p>' : '') + '</div>';
+}
+
+function guessCategory(text) {
+  var m = MAP[String(text || '').trim().toLowerCase()];
+  return m && m[0] === 'Expense' ? m[1] : '';
+}
+
+function openCard(c) {
+  var edit = !!c;
+  c = c ? Object.assign({}, c) : { id: uid(), name: '', type: 'Credit', stmtDay: '', dueDay: '', dueDays: '', limit: '', color: CARD_COLORS[S.cards.length % CARD_COLORS.length] };
+  var used = S.tx.filter(function (t) { return t.card === c.id; }).length;
+  var html = '<div class="row"><h3>' + (edit ? 'Edit card' : 'Add a card') + '</h3><button type="button" class="linkish" id="xClose">Cancel</button></div>' +
+    '<label class="f" for="cName">Name <span class="hint">(any name you\'ll recognise)</span><input class="in" id="cName" value="' + esc(c.name) + '" autocomplete="off"></label>' +
+    '<div class="seg" id="cType">' + CARD_TYPES.map(function (k) { return '<button type="button" data-v="' + k + '" aria-pressed="' + (c.type === k) + '">' + k + '</button>'; }).join('') + '</div>' +
+    '<div id="cCredit" style="display:grid;gap:12px">' +
+    '<div class="f" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Statement day <span class="hint">(the "Statement date" on your bill)</span></span>' +
+    '<button type="button" class="in daybtn" id="cStmtBtn" aria-expanded="false" aria-controls="cStmtGrid"></button>' + dayGrid('cStmtGrid', 28) + '</div>' +
+    '<div class="f" style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Payment due day <span class="hint">(the "Payment due date" on your bill)</span></span>' +
+    '<button type="button" class="in daybtn" id="cDueBtn" aria-expanded="false" aria-controls="cDueGrid"></button>' + dayGrid('cDueGrid', 31) + '</div>' +
+    '<p class="hint" id="cCycleNote" style="margin:0"></p>' +
+    '<label class="f" for="cLimit">Credit limit <span class="hint">(optional)</span><input class="in" id="cLimit" inputmode="numeric" value="' + esc(c.limit) + '"></label></div>' +
+    '<div style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Colour</span><div class="chips" id="cColor">' +
+    CARD_COLORS.map(function (col) { return '<button type="button" class="chip" data-v="' + col + '" aria-pressed="' + (c.color === col) + '" aria-label="Colour ' + col + '"><span class="swatch" style="background:' + col + ';width:16px;height:16px"></span></button>'; }).join('') + '</div></div>' +
+    '<button type="button" class="btn block" id="cSave">' + (edit ? 'Save card' : 'Add card') + '</button>' +
+    (edit ? '<button type="button" class="btn danger block" id="cDel">' + (used ? 'Delete card and its ' + used + ' entries' : 'Delete card') + '</button>' : '');
+  openSheet(html, function (sh) {
+    var typeUi = function () { $('#cCredit', sh).hidden = c.type !== 'Credit'; };
+    var dayUi = function () {
+      $('#cStmtBtn', sh).innerHTML = c.stmtDay ? '<span>' + ordinal(c.stmtDay) + ' of every month</span>' + CAL_ICON : '<span class="muted">Choose a day</span>' + CAL_ICON;
+      $('#cDueBtn', sh).innerHTML = c.dueDay ? '<span>' + ordinal(c.dueDay) + ' of the month</span>' + CAL_ICON
+        : '<span class="muted">' + (c.dueDays ? c.dueDays + ' days after statement (tap to change)' : 'Choose a day') + '</span>' + CAL_ICON;
+      $$('#cStmtGrid button', sh).forEach(function (b) { b.setAttribute('aria-pressed', String(+b.dataset.d === +c.stmtDay)); });
+      $$('#cDueGrid button', sh).forEach(function (b) { b.setAttribute('aria-pressed', String(+b.dataset.d === +c.dueDay)); });
+      var s = +c.stmtDay, d = +c.dueDay;
+      $('#cCycleNote', sh).textContent = s ? 'Bill covers ' + ordinal(s) + ' → ' + ordinal(s === 1 ? 28 : s - 1).replace(/^28th$/, 'end of month') +
+        '. A purchase on the ' + ordinal(s) + ' goes to the next bill.' + (d ? ' Pay by the ' + ordinal(d) + (d <= s ? ' of the following month.' : ' of the same month.') : '') : '';
+    };
+    var wirePicker = function (btnId, gridId, key) {
+      var btn = $('#' + btnId, sh), grid = $('#' + gridId, sh);
+      btn.addEventListener('click', function () {
+        var open = grid.hidden;
+        $$('.daygrid', sh).forEach(function (g) { g.hidden = true; });
+        $$('.daybtn', sh).forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+        grid.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+      });
+      $$('button', grid).forEach(function (b) { b.addEventListener('click', function () {
+        c[key] = +b.dataset.d; if (key === 'dueDay') c.dueDays = '';
+        grid.hidden = true; btn.setAttribute('aria-expanded', 'false'); dayUi();
+      }); });
+    };
+    wirePicker('cStmtBtn', 'cStmtGrid', 'stmtDay');
+    wirePicker('cDueBtn', 'cDueGrid', 'dueDay');
+    dayUi();
+    $$('#cType button', sh).forEach(function (b) { b.addEventListener('click', function () { $$('#cType button', sh).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); c.type = b.dataset.v; typeUi(); }); });
+    $$('#cColor button', sh).forEach(function (b) { b.addEventListener('click', function () { $$('#cColor button', sh).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); c.color = b.dataset.v; }); });
+    typeUi();
+    if (!edit) setTimeout(function () { $('#cName', sh).focus(); }, 60);
+    $('#xClose', sh).addEventListener('click', closeSheet);
+    $('#cSave', sh).addEventListener('click', function () {
+      c.name = $('#cName', sh).value.trim();
+      if (!c.name) { toast('Give the card a name'); return; }
+      if (S.cards.some(function (x) { return x.id !== c.id && x.name.toLowerCase() === c.name.toLowerCase(); })) { toast('You already have a card with that name'); return; }
+      if (c.type === 'Credit') {
+        if (!(c.stmtDay >= 1 && c.stmtDay <= 28)) { toast('Choose the statement day'); $('#cStmtBtn', sh).click(); return; }
+        c.limit = Math.round(+String($('#cLimit', sh).value).replace(/[^\d.]/g, '')) || '';
+      } else { c.stmtDay = ''; c.dueDay = ''; c.dueDays = ''; c.limit = ''; }
+      var i = S.cards.map(function (x) { return x.id; }).indexOf(c.id);
+      if (i >= 0) S.cards[i] = c; else S.cards.push(c);
+      if (!S.lastCard) S.lastCard = c.id;
+      clearBm(); save(); closeSheet(); render(); toast(edit ? 'Card saved' : c.name + ' added');
+    });
+    if (edit) $('#cDel', sh).addEventListener('click', function () {
+      var b = $('#cDel', sh);
+      if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Tap again to delete' + (used ? ' card and ' + used + ' entries' : ''); return; }
+      S.cards = S.cards.filter(function (x) { return x.id !== c.id; });
+      S.tx = S.tx.filter(function (t) { return t.card !== c.id; });
+      Object.keys(S.paid).forEach(function (k) { if (k.indexOf(c.id + '|') === 0) delete S.paid[k]; });
+      if (S.lastCard === c.id) S.lastCard = S.cards[0] ? S.cards[0].id : null;
+      save(); closeSheet(); render(); toast('Card deleted');
+    });
+  });
+}
+
+// ---------- Actions ----------
+var actions = {
+  'new-card': function () { openCard(); },
+  sample: function () { loadSample(); },
+  'clear-sample': function () { S = blank(); save(); render(); toast('Sample cleared. Add your first card.'); },
+  reset: function () {
+    openSheet('<h3>Delete everything?</h3><p class="muted" style="margin:0">This removes all ' + S.tx.length + ' entries and ' + S.cards.length + ' cards from this phone. It cannot be undone. Save a backup first if you might need it.</p>' +
+      '<button type="button" class="btn danger block" id="rYes">Delete all data</button><button type="button" class="btn ghost block" id="rNo">Keep my data</button>', function (sh) {
+      $('#rNo', sh).addEventListener('click', closeSheet);
+      $('#rYes', sh).addEventListener('click', function () { S = blank(); save(); closeSheet(); ui.tab = 'home'; render(); toast('All data deleted'); });
+    });
+  },
+  backup: function () {
+    var data = JSON.stringify({ app: 'selavu', exported: toLocal(new Date()), data: strip(S) }, null, 1);
+    saveFile(new Blob([data], { type: 'application/json' }), 'selavu-backup-' + toLocal(new Date()).slice(0, 10) + '.json');
+  },
+  restore: function () { pendingImport = 'json'; $('#fileIn').click(); },
+  import: function () { pendingImport = 'csv'; $('#fileIn').click(); },
+  csv: function () { saveFile(new Blob(['﻿' + toCsv()], { type: 'text/csv' }), 'selavu-' + toLocal(new Date()).slice(0, 10) + '.csv'); },
+  xlsx: function () { exportXlsx(); }
+};
+
+function strip(s) { var c = JSON.parse(JSON.stringify(s)); c.tx.forEach(function (t) { delete t._bm; }); return c; }
+
+function saveFile(blob, name) {
+  var file;
+  try { file = new File([blob], name, { type: blob.type }); } catch (e) { file = null; }
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: name }).catch(function (e) { if (e && e.name !== 'AbortError') download(blob, name); });
+    return;
+  }
+  download(blob, name);
+}
+function download(blob, name) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  toast('Saved ' + name);
+}
+
+function rowsForExport(list) {
+  return list.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }).map(function (t) {
+    var c = cardById(t.card), d = parseLocal(t.date), bm = billMonth(t), st = c && stmtDay(c) ? statement(c, bm) : null;
+    return { Date: d, Card: c ? c.name : '', 'Amount (₹)': +t.amount, Kind: t.kind, Category: t.category || '', Note: t.note || '',
+             'Bill Month': ymLabel(bm), Cycle: st ? dayLabel(st.start) + ' – ' + dayLabel(st.end) : 'Calendar month' };
+  });
+}
+function toCsv() {
+  var rows = rowsForExport(S.tx);
+  var head = ['Date', 'Card', 'Amount (₹)', 'Kind', 'Category', 'Note', 'Bill Month', 'Cycle'];
+  var q = function (v) { v = v instanceof Date ? toLocal(v).replace('T', ' ') : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  return [head.join(',')].concat(rows.map(function (r) { return head.map(function (h) { return q(r[h]); }).join(','); })).join('\n');
+}
+
+function exportXlsx() {
+  if (!S.tx.length) { toast('Nothing to export yet'); return; }
+  var go = function () {
+    var XLSX = window.XLSX, wb = XLSX.utils.book_new();
+    var widths = [{ wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 28 }, { wch: 12 }, { wch: 18 }];
+    var add = function (name, rows, w) { var ws = XLSX.utils.json_to_sheet(rows, { cellDates: true }); ws['!cols'] = w || widths; XLSX.utils.book_append_sheet(wb, ws, name); return ws; };
+    // Summary
+    var months = {}; S.tx.forEach(function (t) { months[billMonth(t)] = 1; });
+    var ms = Object.keys(months).sort();
+    add('Summary', ms.map(function (m) {
+      var list = inMonth(m), r = { 'Bill Month': ymLabel(m), 'Spent (₹)': sum(expenses(list)) };
+      S.cards.forEach(function (c) { r[c.name] = chargedOn(c.id, m); });
+      r['Transfers / lent (₹)'] = sum(list.filter(function (t) { return t.kind === 'Transfer' || t.kind === 'Lent'; }));
+      return r;
+    }), [{ wch: 12 }, { wch: 12 }].concat(S.cards.map(function () { return { wch: 14 }; })).concat([{ wch: 18 }]));
+    add('All entries', rowsForExport(S.tx));
+    // One tab per bill month, like a closed statement book
+    ms.slice().reverse().forEach(function (m) { add(m.split('-')[0] + '-' + MON[+m.split('-')[1] - 1], rowsForExport(inMonth(m))); });
+    var bills = [];
+    S.cards.filter(function (c) { return stmtDay(c); }).forEach(function (c) {
+      ms.forEach(function (m) {
+        var amt = chargedOn(c.id, m); if (!amt) return;
+        var st = statement(c, m);
+        bills.push({ Card: c.name, 'Bill Month': ymLabel(m), 'Cycle start': st.start, 'Cycle end': st.end, 'Statement date': st.date, 'Due date': st.due || '', 'Total (₹)': amt, Paid: S.paid[c.id + '|' + m] ? 'Yes' : 'No' });
+      });
+    });
+    if (bills.length) add('Card bills', bills, [{ wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 6 }]);
+    add('Cards', S.cards.map(function (c) { return { Card: c.name, Type: c.type, 'Statement day': c.stmtDay || '', 'Payment due day': c.dueDay || (c.dueDays ? c.dueDays + ' days after statement' : ''), 'Credit limit (₹)': c.limit || '' }; }), [{ wch: 18 }, { wch: 8 }, { wch: 14 }, { wch: 10 }, { wch: 14 }]);
+    var out = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellDates: true });
+    saveFile(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'selavu-' + toLocal(new Date()).slice(0, 10) + '.xlsx');
+  };
+  if (window.XLSX) return go();
+  toast('Preparing Excel file…');
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload = go;
+  s.onerror = function () { toast('Excel export needs internet once. Use Export CSV offline.'); };
+  document.head.appendChild(s);
+}
+
+// ---------- Import ----------
+var pendingImport = 'csv';
+function readFile(f) {
+  var r = new FileReader();
+  r.onload = function () {
+    var text = String(r.result);
+    if (pendingImport === 'json' || /^\s*\{/.test(text)) return restoreJson(text);
+    importCsvDialog(text);
+  };
+  r.readAsText(f);
+}
+function restoreJson(text) {
+  try {
+    var o = JSON.parse(text), d = o.data || o;
+    if (!d || !Array.isArray(d.tx) || !Array.isArray(d.cards)) throw new Error('not a backup');
+    openSheet('<h3>Restore this backup?</h3><p class="muted" style="margin:0">It has ' + d.tx.length + ' entries and ' + d.cards.length + ' cards' + (o.exported ? ', saved ' + esc(o.exported.replace('T', ' ')) : '') + '. It replaces what is on this phone now (' + S.tx.length + ' entries).</p>' +
+      '<button type="button" class="btn block" id="ok">Replace with backup</button><button type="button" class="btn ghost block" id="no">Cancel</button>', function (sh) {
+      $('#no', sh).addEventListener('click', closeSheet);
+      $('#ok', sh).addEventListener('click', function () { S = Object.assign(blank(), d, { v: 1 }); clearBm(); save(); closeSheet(); ui.tab = 'home'; render(); toast('Backup restored'); });
+    });
+  } catch (e) { toast('That file is not a Selavu backup'); }
+}
+
+function parseCsv(text) {
+  var rows = [], row = [], f = '', q = false;
+  text = text.replace(/^﻿/, '');
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ',') { row.push(f); f = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += ch;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(function (r) { return r.some(function (c) { return c.trim(); }); });
+}
+
+// Accepts this app's CSV and the old Google Sheet tabs (Date, Card, Amount, Category, Type).
+function parseDate(s, dayFirst) {
+  s = String(s || '').trim();
+  var m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/.exec(s);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0));
+  m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]m)?)?/i.exec(s);
+  if (m) {
+    var a = +m[1], b = +m[2], y = +m[3] < 100 ? 2000 + +m[3] : +m[3], h = +(m[4] || 0);
+    if (m[6]) { h = h % 12 + (/p/i.test(m[6]) ? 12 : 0); }
+    var day = dayFirst ? a : b, mon = dayFirst ? b : a;
+    if (a > 12) { day = a; mon = b; } else if (b > 12) { day = b; mon = a; }
+    return new Date(y, mon - 1, day, h, +(m[5] || 0));
+  }
+  var n = +s;
+  if (n > 20000 && n < 80000) { var d = new Date(Date.UTC(1899, 11, 30) + Math.round(n * 864e5)); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes()); }
+  return new Date(NaN);
+}
+
+function buildImport(rows, dayFirst) {
+  var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
+  var col = function (re) { for (var i = 0; i < head.length; i++) if (re.test(head[i])) return i; return -1; };
+  var iDate = col(/^date/), iCard = col(/card/), iAmt = col(/amount/), iKind = col(/^kind/), iCat = col(/categ/), iNote = col(/note|merchant|description/);
+  if (iDate < 0 || iCard < 0 || iAmt < 0) return { error: 'The first row needs columns named Date, Card and Amount.' };
+  var newCards = {}, tx = [], skipped = 0;
+  var findCard = function (name) {
+    for (var i = 0; i < S.cards.length; i++) if (S.cards[i].name.toLowerCase() === name.toLowerCase()) return S.cards[i];
+    return newCards[name.toLowerCase()];
+  };
+  rows.slice(1).forEach(function (r) {
+    var d = parseDate(r[iDate], dayFirst), amt = +String(r[iAmt] || '').replace(/[₹,\s]/g, ''), name = String(r[iCard] || '').trim();
+    if (isNaN(d) || !(amt > 0) || !name) { skipped++; return; }
+    var card = findCard(name);
+    if (!card) {
+      card = newCards[name.toLowerCase()] = { id: uid(), name: name, type: /\bcc\b|credit/i.test(name) ? 'Credit' : /cash/i.test(name) ? 'Cash' : 'Debit',
+        stmtDay: '', dueDays: '', limit: '', color: CARD_COLORS[(S.cards.length + Object.keys(newCards).length) % CARD_COLORS.length] };
+    }
+    var rawCat = iCat >= 0 ? String(r[iCat] || '').trim() : '', kind = iKind >= 0 ? String(r[iKind] || '').trim() : '';
+    var note = iNote >= 0 ? String(r[iNote] || '').trim() : '';
+    var cat = rawCat;
+    if (CATS.indexOf(rawCat) < 0) {
+      var m = MAP[rawCat.toLowerCase()];
+      cat = m ? m[1] : 'Other';
+      if (!kind && m) kind = m[0];
+      if (rawCat && note.toLowerCase() !== rawCat.toLowerCase()) note = note ? rawCat + ' · ' + note : rawCat;
+    }
+    if (KINDS.indexOf(kind) < 0) kind = 'Expense';
+    tx.push({ id: uid(), date: toLocal(d), card: card.id, amount: Math.round(amt * 100) / 100, kind: kind, category: kind === 'Expense' ? cat : '', note: note });
+  });
+  return { tx: tx, newCards: Object.keys(newCards).map(function (k) { return newCards[k]; }), skipped: skipped };
+}
+
+function importCsvDialog(text) {
+  var rows = parseCsv(text);
+  if (rows.length < 2) { toast('That file has no rows'); return; }
+  var dayFirst = true;
+  var show = function () {
+    var res = buildImport(rows, dayFirst);
+    if (res.error) { closeSheet(); toast(res.error); return; }
+    var first = res.tx[0], sample = first ? parseLocal(first.date) : null;
+    openSheet('<h3>Import ' + res.tx.length + ' entries?</h3>' +
+      '<div class="seg" id="df"><button type="button" data-v="1" aria-pressed="' + dayFirst + '">Dates are DD/MM</button><button type="button" data-v="0" aria-pressed="' + !dayFirst + '">Dates are MM/DD</button></div>' +
+      (sample ? '<p class="small muted" style="margin:0">First row reads as <b>' + sample.getDate() + ' ' + MON[sample.getMonth()] + ' ' + sample.getFullYear() + '</b>. If that looks wrong, switch the date format above.</p>' : '') +
+      (res.newCards.length ? '<p class="small" style="margin:0">New cards to add: <b>' + res.newCards.map(function (c) { return esc(c.name) + ' (' + c.type + ')'; }).join(', ') + '</b>. Set each credit card\'s statement day in Settings afterwards.</p>' : '') +
+      (res.skipped ? '<p class="small muted" style="margin:0">' + res.skipped + ' rows skipped (no date, card or amount).</p>' : '') +
+      '<p class="small muted" style="margin:0">Old category names are matched to the new list. The original text is kept in the note.</p>' +
+      '<button type="button" class="btn block" id="ok">Import</button><button type="button" class="btn ghost block" id="no">Cancel</button>', function (sh) {
+      $$('#df button', sh).forEach(function (b) { b.addEventListener('click', function () { dayFirst = b.dataset.v === '1'; show(); }); });
+      $('#no', sh).addEventListener('click', closeSheet);
+      $('#ok', sh).addEventListener('click', function () {
+        if (S.sample) S = blank();
+        S.cards = S.cards.concat(res.newCards); S.tx = S.tx.concat(res.tx);
+        if (!S.lastCard && S.cards[0]) S.lastCard = S.cards[0].id;
+        clearBm(); save(); closeSheet(); ui.tab = res.newCards.some(function (c) { return c.type === 'Credit'; }) ? 'settings' : 'home'; render();
+        toast(res.tx.length + ' entries imported' + (ui.tab === 'settings' ? '. Now set statement days.' : ''));
+      });
+    });
+  };
+  show();
+}
+
+// ---------- Sample data ----------
+function loadSample() {
+  var cards = [
+    { id: 'sbi', name: 'SBI Credit Card', type: 'Credit', stmtDay: 23, dueDay: 12, limit: 150000, color: CARD_COLORS[0] },
+    { id: 'axis', name: 'Axis Credit Card', type: 'Credit', stmtDay: 18, dueDay: 5, limit: 100000, color: CARD_COLORS[1] },
+    { id: 'upi', name: 'Bank UPI', type: 'UPI', stmtDay: '', dueDays: '', limit: '', color: CARD_COLORS[2] },
+    { id: 'cash', name: 'Cash', type: 'Cash', stmtDay: '', dueDays: '', limit: '', color: CARD_COLORS[7] }
+  ];
+  var plan = [['Food & Dining', 'Swiggy', 450, 'sbi'], ['Groceries', 'Zepto', 820, 'upi'], ['Fuel', 'Petrol', 1500, 'axis'], ['Food & Dining', 'Lunch', 260, 'upi'],
+    ['Shopping', 'Amazon', 2499, 'sbi'], ['Bills & Utilities', 'Electricity', 1800, 'upi'], ['Groceries', 'Vegetables', 340, 'cash'], ['Subscriptions', 'Netflix', 649, 'axis'],
+    ['Travel', 'Train tickets', 1240, 'sbi'], ['Health', 'Pharmacy', 560, 'upi'], ['Entertainment', 'Movie', 700, 'axis'], ['Food & Dining', 'Dinner out', 1350, 'sbi']];
+  var tx = [], now = new Date(), seed = 7;
+  var rnd = function () { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  for (var back = 85; back >= 0; back -= 2) {
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back, 9 + Math.floor(rnd() * 12), Math.floor(rnd() * 60));
+    var p = plan[Math.floor(rnd() * plan.length)];
+    tx.push({ id: uid(), date: toLocal(d), card: p[3], amount: Math.round(p[2] * (0.6 + rnd() * 0.8)), kind: 'Expense', category: p[0], note: p[1] });
+  }
+  tx.push({ id: uid(), date: toLocal(new Date(now.getFullYear(), now.getMonth(), Math.max(now.getDate() - 10, 1), 18, 0)), card: 'upi', amount: 10000, kind: 'Expense', category: 'Rent & Housing', note: 'House rent' });
+  tx.push({ id: uid(), date: toLocal(new Date(now.getFullYear(), now.getMonth(), Math.max(now.getDate() - 6, 1), 20, 0)), card: 'upi', amount: 2000, kind: 'Lent', category: '', note: 'Friend' });
+  S = Object.assign(blank(), { cards: cards, tx: tx, budgets: { 'Food & Dining': 6000, 'Groceries': 5000, 'Fuel': 4000 }, lastCard: 'sbi', sample: true });
+  save(); render(); toast('Sample data loaded. Clear it any time.');
+}
+
+// ---------- Deep links: #add or ?amount=…&card=…&category=…&note=…&kind=… ----------
+function handleLink() {
+  var params = new URLSearchParams(location.search), hash = location.hash.replace('#', '');
+  if (hash !== 'add' && !params.has('amount') && !params.has('add')) return;
+  var pre = {};
+  var amt = +String(params.get('amount') || '').replace(/[₹,\s]/g, ''); if (amt > 0) pre.amount = amt;
+  var cn = (params.get('card') || '').toLowerCase();
+  if (cn) S.cards.forEach(function (c) { if (c.name.toLowerCase() === cn) pre.card = c.id; });
+  var cat = params.get('category') || ''; if (CATS.indexOf(cat) >= 0) pre.category = cat;
+  var k = params.get('kind') || ''; if (KINDS.indexOf(k) >= 0) pre.kind = k;
+  if (params.get('note')) pre.note = params.get('note');
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  openExpense(null, pre);
+}
+window.addEventListener('hashchange', handleLink);
+
+// ---------- Boot ----------
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+if ('serviceWorker' in navigator && location.protocol === 'https:' && window.top === window.self) {
+  navigator.serviceWorker.register('sw.js').catch(function () {});
+}
+window.__selavu = { billMonthFor: billMonthFor, statement: statement, parseDate: parseDate, buildImport: buildImport, parseCsv: parseCsv, state: function () { return S; } };
+render();
+handleLink();
+})();
+</script>
+
+</html>
