@@ -6,7 +6,7 @@ A phone app for tracking card spending by **billing cycle**. It opens from a lin
 - Credit cards follow their own cycle (e.g. SBI 23rd → 22nd, Axis 18th → 17th). Debit, UPI and cash use the calendar month.
 - **Bills** tab: every statement with its total, due date and a *Mark paid* toggle
 - Charts: category donut, 6-month trend by card, daily spend
-- Export to Excel (one tab per month), CSV, backup and restore, and import from an old Google Sheet
+- **Syncs to your own Google Sheet** automatically: a row per entry, a tab per bill month, charts. It downloads as Excel and doubles as your backup.
 
 ---
 
@@ -18,10 +18,11 @@ A phone app for tracking card spending by **billing cycle**. It opens from a lin
 4. [Add your cards](#4-add-your-cards)
 5. [Log a payment every day](#5-log-a-payment-every-day)
 6. [One tap from anywhere](#6-one-tap-from-anywhere-optional)
-7. [Bring in your Google Sheet history](#7-bring-in-your-google-sheet-history-optional)
-8. [Keep your data safe](#8-keep-your-data-safe)
-9. [FAQ](#faq)
-10. [For developers](#for-developers)
+7. [Connect your Google Sheet](#7-connect-your-google-sheet)
+8. [Bring in your old tracker history](#8-bring-in-your-old-tracker-history-optional)
+9. [Keep your data safe](#9-keep-your-data-safe)
+10. [FAQ](#faq)
+11. [For developers](#for-developers)
 
 ---
 
@@ -51,6 +52,18 @@ Test the link on your own phone first: tap **Try with sample data**, look around
 
 Updates reach phones the next time they open the app with internet. Users' data is not touched.
 
+### Make the Google Sheet template (once)
+
+So people can connect a sheet in a few taps, make one template they can copy:
+
+1. Create a new Google Sheet and name it **Selavu**.
+2. **Extensions → Apps Script.** Delete what's there, paste everything from [`sheet/Code.gs`](sheet/Code.gs), and click **Save**.
+3. Back in the sheet, reload it. Choose **Selavu → 1. Set up this sheet** and allow the permissions.
+4. **Share → General access → Anyone with the link → Viewer.**
+5. Copy the sheet's address and change the ending from `/edit…` to **`/copy`**, for example `https://docs.google.com/spreadsheets/d/<id>/copy`. Opening that link gives each person their own copy, script included.
+
+Share that `/copy` link along with the app link. Nobody can see your data through it, because they only get an empty copy of the template.
+
 ---
 
 ## 2. Install on a phone
@@ -69,7 +82,7 @@ Updates reach phones the next time they open the app with internet. Users' data 
 2. Tap **Install** on the banner, or use the **⋮** menu → **Add to Home screen / Install app**.
 3. Open **Selavu** from the Home Screen or app drawer.
 
-After the first open, the app works **without internet**. Only *Export to Excel* needs internet, and only the first time.
+After the first open, the app works **without internet**. Entries made offline are sent to your Google Sheet when you're back online.
 
 ---
 
@@ -122,7 +135,7 @@ Choose what kind of money it is. **Only Expense counts as spending.**
 - **Home:** the month's spending, each card's bill, category chart, 6-month trend and daily chart. Use **‹ ›** to change month.
 - **History:** every entry for the month. Search, filter by card, and tap an entry to edit or delete it.
 - **Bills:** every credit card statement with its total and due date. Tap **Mark paid** after paying; bills due within 3 days turn red.
-- **Settings:** cards, budgets, export, backup, import.
+- **Settings:** cards, budgets and your Google Sheet connection.
 
 Months follow the bill. The **Nov** page shows the SBI bill made on 23 Nov (purchases 23 Oct – 22 Nov), the Axis bill made on 18 Nov (18 Oct – 17 Nov), and debit/UPI/cash spending dated in November.
 
@@ -159,31 +172,69 @@ https://<your-site>/?amount=250&card=Axis%20CC&category=Food%20%26%20Dining&note
 
 ---
 
-## 7. Bring in your Google Sheet history (optional)
+## 7. Connect your Google Sheet
 
-1. In Google Sheets, open the transactions tab → **File → Download → Comma-separated values (.csv)**.
-2. Move the file to the phone (Files, Google Drive or AirDrop).
-3. In Selavu: **Settings → Import from a spreadsheet (CSV)** → pick the file.
-4. Check how the first date was read. Keep **DD/MM** for Indian dates → **Import**.
-5. Missing cards are created automatically. Open each new credit card in **Settings** and set its **statement day** and **payment due day**, so old entries land in the right bills.
+Every entry you save, edit or delete in Selavu is copied to **your own** Google Sheet within a second or two. The sheet has:
 
-The file needs columns named **Date**, **Card** and **Amount**. *Category*, *Kind* and *Note* are used if present. Old free-text categories (e.g. "Outside food", "Zepto", "Chit amount") are mapped to the new list, and the original words go into the note.
+- **Summary:** spending by bill month and card, plus this month by category, with charts
+- **Transactions:** one row per entry
+- **Cards:** your cards and their statement and due days
+- **One tab per bill month** (e.g. `Nov-2026`): card totals, category chart and that month's entries
+
+It works offline too: entries wait on the phone and go out when you're back online. The dot next to **Selavu** at the top shows the state: green = synced, amber = waiting, red = problem.
+
+### Set it up (about 3 minutes, on a computer is easiest)
+
+1. Open the **template link** you were given (it ends in `/copy`) → **Make a copy**. The copy lands in your own Google Drive.
+   *No template link?* Create a blank Google Sheet, then **Extensions → Apps Script**, paste [`sheet/Code.gs`](sheet/Code.gs), and **Save**.
+2. In your copy, reload the page. Choose **Selavu → 1. Set up this sheet** → **Continue** → pick your Google account → **Advanced → Go to … (unsafe)** → **Allow**.
+   Google shows this warning for any personal script that hasn't been reviewed by Google. The script is in your own sheet and only touches that sheet.
+3. **Extensions → Apps Script → Deploy → New deployment.** Click the gear → **Web app**:
+   - Execute as: **Me**
+   - Who has access: **Anyone**
+   - **Deploy**, and copy the **Web app URL** (it ends in `/exec`).
+4. Back in the sheet: **Selavu → 2. Get connection link for the app** → paste the Web app URL → **OK** → **Copy link**.
+5. Send that link to your phone (e.g. WhatsApp it to yourself and copy it).
+6. In Selavu: **Settings → Connect Google Sheet** → paste → **Connect**.
+   - Phone has entries, sheet is empty: they're all sent to the sheet.
+   - Sheet has entries, phone is empty: you're asked whether to bring them to the phone.
+   - Both have entries: you choose which one to keep.
+
+> **Keep the connection link private.** Anyone with it can read and change the entries in your sheet. If it leaks, run **Deploy → Manage deployments → Archive** and deploy again.
+
+### In Settings after connecting
+
+- **Sync now:** sends anything waiting straight away.
+- **Open sheet:** opens your Google Sheet.
+- **Restore from Google Sheet:** replaces what's on the phone with the sheet. Use it on a new phone or after reinstalling.
+- **Disconnect:** stops syncing. The sheet keeps everything already sent.
+
+**Excel:** in Google Sheets, **File → Download → Microsoft Excel (.xlsx)** gives you a real Excel file any time, month tabs included.
 
 ---
 
-## 8. Keep your data safe
+## 8. Bring in your old tracker history (optional)
 
-Entries live **only on the phone**. That keeps them private, but nothing is backed up automatically.
+1. In your Selavu sheet, choose **Selavu → Import old tracker rows**. It creates an **Old data** tab.
+2. Paste your old rows there with a header row: **Date**, **Card**, **Amount**, **Category**.
+3. Run **Selavu → Import old tracker rows** again. Old categories (e.g. "Outside food", "Zepto", "Chit amount") are matched to the new list, and the original text goes in the Note column.
+4. In Selavu: **Settings → Restore from Google Sheet**.
+5. Set the **statement day** for any credit card the app points out. The app then sorts every entry into its bill month and updates the sheet.
 
-- **Once a month:** **Settings → Save backup file** → save to Files, iCloud Drive or Google Drive.
-- **New phone:** install Selavu (step 2) → **Settings → Restore backup**.
-- **Excel:** **Settings → Export to Excel** creates a Summary sheet, all entries, **one tab per month**, card bills and cards.
+---
 
-**These erase the data. Back up first:**
+## 9. Keep your data safe
+
+With a Google Sheet connected, your sheet **is** your backup:
+
+- **New phone, or you deleted the app:** install Selavu (step 2) → **Settings → Connect Google Sheet** with the same link → **Bring them here**.
+- Check that the dot at the top is green before deleting the app or changing phones, so nothing is still waiting.
+
+Without a sheet connected, entries live **only on the phone**. These erase them:
 
 - deleting the Selavu icon from the Home Screen
 - iPhone: Settings → Safari → *Clear History and Website Data*
-- Android: clearing Chrome's site data for the app's address
+- Android: clearing the browser's site data for the app's address
 
 ---
 
@@ -193,7 +244,13 @@ Entries live **only on the phone**. That keeps them private, but nothing is back
 Yes, it's free, and no account is needed. It's a web app, so it skips the App Store entirely.
 
 **Can two phones share the same data?**
-Not live. Each phone has its own copy. Move data with backup and restore.
+Not live. Each phone keeps its own copy. If both are connected to the same sheet, the last phone to send overwrites rows with the same entry. It's best to log from one phone and use **Restore from Google Sheet** on another when needed.
+
+**Can I edit entries in the Google Sheet?**
+Edits in the sheet aren't sent back to the app automatically, and the next change from the app may overwrite them. Make changes in the app. If you did edit the sheet, use **Restore from Google Sheet** to bring the edits to the phone.
+
+**Who can see my sheet?**
+Only you, plus anyone you share the sheet with. The **connection link**, though, can read and change your entries through the app (that's how Restore works), so treat it like a password and don't share it.
 
 **I changed a card's statement day. What happens to old entries?**
 They're re-sorted into bills using the new day straight away.
@@ -201,8 +258,8 @@ They're re-sorted into bills using the new day straight away.
 **I logged something on the wrong card or date.**
 History → tap the entry → change it → Save. To remove it, tap Delete twice.
 
-**"Export to Excel" says it needs internet.**
-The Excel builder downloads the first time you use it. *Export CSV* always works offline and also opens in Excel.
+**The dot is red.**
+Open **Settings** to see the message. Usually the Web app was deployed with access other than **Anyone**, or the connection link was replaced. Get a new link with **Selavu → 2. Get connection link for the app** and connect again.
 
 ---
 
@@ -212,6 +269,7 @@ The Excel builder downloads the first time you use it. *Export CSV* always works
 app.html      The whole app: markup, styles and script in one file (the source to edit)
 build.py      Builds docs/ (adds PWA head tags, manifest, offline service worker, icons)
 icons/        icon.svg (the source) and the PNGs rendered from it
+sheet/        Code.gs, the Google Apps Script that receives the sync (pasted into the template sheet)
 docs/         Built site, served by GitHub Pages or any static host
 ```
 
@@ -227,6 +285,7 @@ python -m http.server 8765 --directory docs
 
 Then open `http://localhost:8765`. Install-to-Home-Screen and offline mode only work over **https**, so test those on the hosted link.
 
-- No dependencies. The Excel export loads SheetJS from cdnjs on first use.
-- Data is stored in `localStorage` under the key `selavu.v1`.
+- No dependencies.
+- Data is stored in `localStorage` under the key `selavu.v1`. Unsent changes are queued there by entry ID (`sync.ops`).
+- Sync: the app `POST`s JSON (`text/plain`, so there's no CORS preflight) to the Apps Script web app with `action` = `ping`, `push` (incremental `ops`, or `full` with every entry) or `pull`. A secret key from the connection link is checked on every call.
 - Billing rule: a purchase on day *d* with statement day *s* belongs to the statement of the same month if *d* < *s*, otherwise the next month's.

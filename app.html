@@ -32,7 +32,13 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 12px 10px; }
 .top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 720px; margin: 0 auto; }
-.brand { font-weight: 700; font-size: 20px; letter-spacing: -.01em; }
+.brand { font-weight: 700; font-size: 20px; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+.sync-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; display: inline-block; }
+.sync-dot.ok { background: var(--good); } .sync-dot.wait { background: var(--warn); } .sync-dot.bad { background: var(--bad); }
+.sync-dot.busy { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .sync-dot.busy { animation: none; } }
+.sync-line { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .month { display: flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
 .month button { border: 0; background: none; width: 34px; height: 34px; border-radius: 50%; font-size: 18px; color: var(--muted); }
 .month span { min-width: 92px; text-align: center; font-weight: 600; font-size: 14px; }
@@ -145,7 +151,7 @@ code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; b
 
 <header class="top gutter">
   <div class="top-row">
-    <div class="brand">Selavu</div>
+    <div class="brand">Selavu <span id="syncDot" class="sync-dot" role="img" hidden></span></div>
     <div class="month" id="monthNav">
       <button type="button" id="prevM" aria-label="Previous month">‹</button>
       <span id="monthLbl"></span>
@@ -201,7 +207,10 @@ var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
 var S = load();
 var ui = { tab: 'home', ym: ymOf(new Date()), q: '', cardFilter: '' };
 
-function blank() { return { v: 1, cards: [], tx: [], budgets: {}, paid: {}, lastCard: null, sample: false }; }
+function blank() {
+  return { v: 1, cards: [], tx: [], budgets: {}, paid: {}, lastCard: null, sample: false,
+           sync: { url: '', key: '', sheetUrl: '', ops: [], meta: false, full: false, last: '', error: '' } };
+}
 function load() {
   try {
     var raw = localStorage.getItem(STORE);
@@ -504,11 +513,23 @@ function viewSettings() {
     CATS.map(function (c, i) { return '<label for="b' + i + '" style="display:flex;gap:8px;align-items:center"><span class="swatch" style="background:' + CAT_COLORS[i] + '"></span>' + esc(c) + '</label>' +
       '<input class="in" id="b' + i + '" data-budget="' + esc(c) + '" inputmode="numeric" placeholder="₹" value="' + (S.budgets[c] || '') + '">'; }).join('') + '</div></section>';
 
-  h += '<section class="card"><h2>Your data</h2><p class="small muted" style="margin:0">Everything is stored only on this phone. Export a backup now and then, and before you change phones.</p>' +
-    '<div class="btns"><button type="button" class="btn" data-act="xlsx">Export to Excel</button><button type="button" class="btn ghost" data-act="csv">Export CSV</button></div>' +
-    '<div class="btns"><button type="button" class="btn ghost" data-act="backup">Save backup file</button><button type="button" class="btn ghost" data-act="restore">Restore backup</button></div>' +
-    '<button type="button" class="btn ghost block" data-act="import">Import from a spreadsheet (CSV)</button>' +
-    '<input type="file" id="fileIn" accept=".json,.csv,text/csv,application/json" hidden>' +
+  if (!syncOn()) {
+    h += '<section class="card"><h2>Google Sheet</h2><p class="small muted" style="margin:0">Connect your own Google Sheet and every entry is copied there automatically. ' +
+      'The sheet gets a tab for each bill month and charts, downloads as Excel, and doubles as your backup.</p>' +
+      (S.sample ? '<p class="small" style="margin:0">Connecting clears the sample data first.</p>' : '') +
+      '<button type="button" class="btn block" data-act="connect">Connect Google Sheet</button>' +
+      '<a class="small" href="https://github.com/prasannarajangv/selavu-app#7-connect-your-google-sheet" target="_blank" rel="noopener">How to set up your sheet</a></section>';
+  } else {
+    var st = syncState();
+    h += '<section class="card"><h2>Google Sheet</h2>' +
+      '<div class="sync-line"><span class="sync-dot ' + st.tone + '"></span><span>' + esc(st.text) + '</span></div>' +
+      '<div class="btns"><button type="button" class="btn ghost" data-act="sync-now">Sync now</button>' +
+      (S.sync.sheetUrl ? '<a class="btn ghost" style="text-align:center;text-decoration:none" href="' + esc(S.sync.sheetUrl) + '" target="_blank" rel="noopener">Open sheet</a>' : '') + '</div>' +
+      '<button type="button" class="btn ghost block" data-act="pull">Restore from Google Sheet</button>' +
+      '<button type="button" class="linkish" style="justify-self:start" data-act="disconnect">Disconnect</button></section>';
+  }
+
+  h += '<section class="card"><h2>This phone</h2>' +
     '<button type="button" class="btn danger block" data-act="reset">Delete all data on this phone</button></section>' +
     '<p class="small muted" style="text-align:center;margin:4px 0">Selavu · works offline · ' + S.tx.length + ' entries · ' + S.cards.length + ' cards</p>';
   return h;
@@ -520,12 +541,11 @@ function bindView(v) {
   $$('[data-edit]', v).forEach(function (b) { b.addEventListener('click', function () { openExpense(S.tx.filter(function (t) { return t.id === b.dataset.edit; })[0]); }); });
   $$('[data-card]', v).forEach(function (b) { b.addEventListener('click', function () { openCard(cardById(b.dataset.card)); }); });
   $$('[data-paid]', v).forEach(function (b) { b.addEventListener('click', function () {
-    var k = b.dataset.paid; if (S.paid[k]) delete S.paid[k]; else S.paid[k] = toLocal(new Date()); save(); render(); }); });
+    var k = b.dataset.paid; if (S.paid[k]) delete S.paid[k]; else S.paid[k] = toLocal(new Date()); queueMeta(); save(); render(); }); });
   $$('[data-budget]', v).forEach(function (i) { i.addEventListener('change', function () {
-    var n = Math.round(+String(i.value).replace(/[^\d.]/g, '')); if (n > 0) S.budgets[i.dataset.budget] = n; else delete S.budgets[i.dataset.budget]; i.value = S.budgets[i.dataset.budget] || ''; save(); toast('Budget saved'); }); });
+    var n = Math.round(+String(i.value).replace(/[^\d.]/g, '')); if (n > 0) S.budgets[i.dataset.budget] = n; else delete S.budgets[i.dataset.budget]; i.value = S.budgets[i.dataset.budget] || ''; queueMeta(); save(); toast('Budget saved'); }); });
   var q = $('#q', v); if (q) q.addEventListener('input', function () { ui.q = q.value; var pos = q.selectionStart; render(); var n = $('#q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} });
   var cf = $('#cardFilter', v); if (cf) cf.addEventListener('change', function () { ui.cardFilter = cf.value; render(); });
-  var fi = $('#fileIn', v); if (fi) fi.addEventListener('change', function () { if (fi.files[0]) readFile(fi.files[0]); fi.value = ''; });
 }
 
 $$('nav.tabs [data-tab]').forEach(function (b) { b.addEventListener('click', function () { ui.tab = b.dataset.tab; render(); window.scrollTo(0, 0); }); });
@@ -600,6 +620,7 @@ function openExpense(t, prefill) {
       var i = S.tx.map(function (x) { return x.id; }).indexOf(t.id);
       if (i >= 0) S.tx[i] = t; else S.tx.push(t);
       S.lastCard = t.card;
+      queueTx(t.id);
       save(); closeSheet();
       var c = cardById(t.card), bm = billMonth(t);
       ui.ym = bm; render();
@@ -607,7 +628,7 @@ function openExpense(t, prefill) {
     });
     if (edit) $('#fDel', sh).addEventListener('click', function () {
       var b = $('#fDel', sh);
-      if (b.dataset.sure) { S.tx = S.tx.filter(function (x) { return x.id !== t.id; }); save(); closeSheet(); render(); toast('Entry deleted'); }
+      if (b.dataset.sure) { S.tx = S.tx.filter(function (x) { return x.id !== t.id; }); queueDel(t.id); save(); closeSheet(); render(); toast('Entry deleted'); }
       else { b.dataset.sure = '1'; b.textContent = 'Tap again to delete'; }
     });
   });
@@ -630,6 +651,7 @@ function openCard(c) {
   var edit = !!c;
   c = c ? Object.assign({}, c) : { id: uid(), name: '', type: 'Credit', stmtDay: '', dueDay: '', dueDays: '', limit: '', color: CARD_COLORS[S.cards.length % CARD_COLORS.length] };
   var used = S.tx.filter(function (t) { return t.card === c.id; }).length;
+  var before = JSON.stringify([c.name, c.type, c.stmtDay]);
   var html = '<div class="row"><h3>' + (edit ? 'Edit card' : 'Add a card') + '</h3><button type="button" class="linkish" id="xClose">Cancel</button></div>' +
     '<label class="f" for="cName">Name <span class="hint">(any name you\'ll recognise)</span><input class="in" id="cName" value="' + esc(c.name) + '" autocomplete="off"></label>' +
     '<div class="seg" id="cType">' + CARD_TYPES.map(function (k) { return '<button type="button" data-v="' + k + '" aria-pressed="' + (c.type === k) + '">' + k + '</button>'; }).join('') + '</div>' +
@@ -688,15 +710,18 @@ function openCard(c) {
       var i = S.cards.map(function (x) { return x.id; }).indexOf(c.id);
       if (i >= 0) S.cards[i] = c; else S.cards.push(c);
       if (!S.lastCard) S.lastCard = c.id;
+      // Name, type or statement day changes move entries between bill months, so resend everything.
+      queueMeta(edit && used > 0 && JSON.stringify([c.name, c.type, c.stmtDay]) !== before);
       clearBm(); save(); closeSheet(); render(); toast(edit ? 'Card saved' : c.name + ' added');
     });
     if (edit) $('#cDel', sh).addEventListener('click', function () {
       var b = $('#cDel', sh);
       if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Tap again to delete' + (used ? ' card and ' + used + ' entries' : ''); return; }
       S.cards = S.cards.filter(function (x) { return x.id !== c.id; });
-      S.tx = S.tx.filter(function (t) { return t.card !== c.id; });
+      S.tx = S.tx.filter(function (t) { if (t.card === c.id) { queueDel(t.id); return false; } return true; });
       Object.keys(S.paid).forEach(function (k) { if (k.indexOf(c.id + '|') === 0) delete S.paid[k]; });
       if (S.lastCard === c.id) S.lastCard = S.cards[0] ? S.cards[0].id : null;
+      queueMeta();
       save(); closeSheet(); render(); toast('Card deleted');
     });
   });
@@ -706,214 +731,212 @@ function openCard(c) {
 var actions = {
   'new-card': function () { openCard(); },
   sample: function () { loadSample(); },
-  'clear-sample': function () { S = blank(); save(); render(); toast('Sample cleared. Add your first card.'); },
+  'clear-sample': function () { S = keepSync(blank()); save(); render(); toast('Sample cleared. Add your first card.'); },
   reset: function () {
-    openSheet('<h3>Delete everything?</h3><p class="muted" style="margin:0">This removes all ' + S.tx.length + ' entries and ' + S.cards.length + ' cards from this phone. It cannot be undone. Save a backup first if you might need it.</p>' +
-      '<button type="button" class="btn danger block" id="rYes">Delete all data</button><button type="button" class="btn ghost block" id="rNo">Keep my data</button>', function (sh) {
+    openSheet('<h3>Delete everything on this phone?</h3><p class="muted" style="margin:0">This removes all ' + S.tx.length + ' entries and ' + S.cards.length + ' cards from this phone. ' +
+      (syncOn() ? 'Your Google Sheet is not changed, and you can bring everything back with Restore from Google Sheet.' : 'It cannot be undone.') + '</p>' +
+      '<button type="button" class="btn danger block" id="rYes">Delete from this phone</button><button type="button" class="btn ghost block" id="rNo">Keep my data</button>', function (sh) {
       $('#rNo', sh).addEventListener('click', closeSheet);
-      $('#rYes', sh).addEventListener('click', function () { S = blank(); save(); closeSheet(); ui.tab = 'home'; render(); toast('All data deleted'); });
+      $('#rYes', sh).addEventListener('click', function () { S = keepSync(blank()); save(); closeSheet(); ui.tab = 'home'; render(); toast('Deleted from this phone'); });
     });
   },
-  backup: function () {
-    var data = JSON.stringify({ app: 'selavu', exported: toLocal(new Date()), data: strip(S) }, null, 1);
-    saveFile(new Blob([data], { type: 'application/json' }), 'selavu-backup-' + toLocal(new Date()).slice(0, 10) + '.json');
-  },
-  restore: function () { pendingImport = 'json'; $('#fileIn').click(); },
-  import: function () { pendingImport = 'csv'; $('#fileIn').click(); },
-  csv: function () { saveFile(new Blob(['﻿' + toCsv()], { type: 'text/csv' }), 'selavu-' + toLocal(new Date()).slice(0, 10) + '.csv'); },
-  xlsx: function () { exportXlsx(); }
+  connect: function () { openConnect(); },
+  'sync-now': function () { if (!navigator.onLine) { toast('You are offline. Changes will be sent when you are back online.'); return; } syncNow(true); },
+  pull: function () { confirmRestore(); },
+  disconnect: function () {
+    openSheet('<h3>Disconnect the Google Sheet?</h3><p class="muted" style="margin:0">New entries will stay only on this phone. The sheet keeps everything already sent.' +
+      (pendingCount() ? ' <b>' + pendingCount() + ' changes have not been sent yet</b> and will not reach the sheet.' : '') + '</p>' +
+      '<button type="button" class="btn danger block" id="dYes">Disconnect</button><button type="button" class="btn ghost block" id="dNo">Stay connected</button>', function (sh) {
+      $('#dNo', sh).addEventListener('click', closeSheet);
+      $('#dYes', sh).addEventListener('click', function () { S.sync = blank().sync; save(); closeSheet(); render(); toast('Google Sheet disconnected'); });
+    });
+  }
 };
 
-function strip(s) { var c = JSON.parse(JSON.stringify(s)); c.tx.forEach(function (t) { delete t._bm; }); return c; }
+// ---------- Google Sheet sync ----------
+// The phone is the source of truth. Every change is queued (by entry id) and sent to the person's own
+// Google Sheet (Apps Script web app). Queued changes survive restarts and go out when the phone is online.
+function keepSync(fresh) { fresh.sync = Object.assign(blank().sync, S.sync, { ops: [], meta: true, full: false }); return fresh; }
+function syncOn() { return !!(S.sync && S.sync.url && !S.sample); }
+function pendingCount() { return syncOn() ? S.sync.ops.length + (S.sync.full ? S.tx.length : 0) + (S.sync.meta && !S.sync.ops.length && !S.sync.full ? 1 : 0) : 0; }
+function txById(id) { for (var i = 0; i < S.tx.length; i++) if (S.tx[i].id === id) return S.tx[i]; return null; }
 
-function saveFile(blob, name) {
-  var file;
-  try { file = new File([blob], name, { type: blob.type }); } catch (e) { file = null; }
-  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator.share({ files: [file], title: name }).catch(function (e) { if (e && e.name !== 'AbortError') download(blob, name); });
+function queueTx(id) { queueOp({ op: 'upsert', id: id }); }
+function queueDel(id) { queueOp({ op: 'delete', id: id }); }
+function queueOp(o) {
+  if (!syncOn()) return;
+  S.sync.ops = S.sync.ops.filter(function (x) { return x.id !== o.id; });
+  S.sync.ops.push(o);
+  scheduleSync();
+}
+// Cards, budgets or paid bills changed. `full` = bill months may have moved (statement day, type or name changed).
+function queueMeta(full) { if (!syncOn()) return; S.sync.meta = true; if (full) S.sync.full = true; scheduleSync(); }
+
+function txPayload(t) {
+  var c = cardById(t.card), bm = billMonth(t), st = c && stmtDay(c) ? statement(c, bm) : null;
+  return { id: t.id, date: t.date, card: c ? c.name : '', cardId: t.card, amount: +t.amount, kind: t.kind, category: t.category || '',
+           note: t.note || '', billMonth: bm, cycle: st ? dayLabel(st.start) + ' – ' + dayLabel(st.end) : 'Calendar month' };
+}
+
+function api(body, conn) {
+  conn = conn || S.sync;
+  return fetch(conn.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow',
+                           body: JSON.stringify(Object.assign({ k: conn.key }, body)) })
+    .then(function (r) { return r.text(); })
+    .then(function (text) {
+      var j;
+      try { j = JSON.parse(text); } catch (e) { throw new Error('The sheet didn\'t answer. Check that the script is deployed as a Web app with access "Anyone".'); }
+      if (!j.ok) throw new Error(j.error === 'bad-key' ? 'The connection link is not valid any more. Get a new one from the sheet.' : 'Sheet error: ' + j.error);
+      return j;
+    }, function () { throw new Error(navigator.onLine ? 'Could not reach Google. Check the connection link.' : 'You are offline.'); });
+}
+
+var syncing = false, syncTimer = null;
+function scheduleSync(ms) { clearTimeout(syncTimer); syncTimer = setTimeout(function () { syncNow(false); }, ms == null ? 800 : ms); }
+
+function syncNow(manual) {
+  if (!syncOn() || syncing) return Promise.resolve();
+  var sy = S.sync;
+  if (!sy.ops.length && !sy.meta && !sy.full) { if (manual) toast('Everything is already in your sheet'); return Promise.resolve(); }
+  if (navigator.onLine === false) { syncStatusChanged(); return Promise.resolve(); }
+  syncing = true; syncStatusChanged();
+  var sent = sy.ops.slice(), wasFull = sy.full, wasMeta = sy.meta;
+  var body = { action: 'push' };
+  if (wasFull) { body.full = true; body.tx = S.tx.map(txPayload); }
+  else body.ops = sent.map(function (o) {
+    if (o.op === 'delete') return { op: 'delete', id: o.id };
+    var t = txById(o.id); return t ? { op: 'upsert', tx: txPayload(t) } : { op: 'delete', id: o.id };
+  });
+  if (wasFull || wasMeta) { body.cards = S.cards; body.budgets = S.budgets; body.paid = S.paid; }
+  sy.full = false; sy.meta = false;
+  return api(body).then(function (j) {
+    // Drop what was sent; anything queued while the request was in flight stays for the next round.
+    sy.ops = sy.ops.filter(function (o) { return sent.indexOf(o) < 0; });
+    sy.last = toLocal(new Date()); sy.error = ''; if (j.sheetUrl) sy.sheetUrl = j.sheetUrl;
+    save();
+    if (manual) toast('Synced to Google Sheet');
+  }, function (e) {
+    sy.full = sy.full || wasFull; sy.meta = sy.meta || wasMeta; sy.error = e.message; save();
+    if (manual) toast(e.message);
+  }).then(function () {
+    syncing = false; syncStatusChanged();
+    if (!sy.error && (sy.ops.length || sy.meta || sy.full)) scheduleSync(1500);
+  });
+}
+
+function syncStatusChanged() {
+  var dot = $('#syncDot');
+  if (dot) {
+    var st = syncState();
+    dot.hidden = !syncOn();
+    dot.className = 'sync-dot ' + st.tone;
+    dot.title = st.text;
+    dot.setAttribute('aria-label', st.text);
+  }
+  if (ui.tab === 'settings' && !$('#sheetRoot').innerHTML) render();
+}
+function syncState() {
+  if (!syncOn()) return { tone: '', text: 'Not connected' };
+  var n = pendingCount(), sy = S.sync;
+  if (syncing) return { tone: 'busy', text: 'Sending to Google Sheet…' };
+  if (sy.error && n) return { tone: 'bad', text: sy.error };
+  if (n) return { tone: 'wait', text: n + (n === 1 ? ' change' : ' changes') + ' waiting' + (navigator.onLine === false ? ': will send when you are online' : '') };
+  return { tone: 'ok', text: 'Everything synced' + (sy.last ? ' · last at ' + sy.last.slice(11) + ' on ' + dayLabel(parseLocal(sy.last)) : '') };
+}
+
+function parseConnLink(s) {
+  var m = /^(https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec)\?k=([\w-]+)\s*$/.exec(String(s || '').trim());
+  return m ? { url: m[1], key: m[2] } : null;
+}
+
+function openConnect() {
+  var html = '<div class="row"><h3>Connect Google Sheet</h3><button type="button" class="linkish" id="xClose">Cancel</button></div>' +
+    '<p class="small muted" style="margin:0">In your copy of the Selavu sheet choose <b>Selavu → Get connection link for the app</b>, copy the link, and paste it here.</p>' +
+    '<label class="f" for="cLink">Connection link<textarea class="in" id="cLink" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" style="resize:none;font-size:14px"></textarea></label>' +
+    '<p class="small" id="cMsg" style="margin:0" aria-live="polite"></p>' +
+    '<button type="button" class="btn block" id="cGo">Connect</button>';
+  openSheet(html, function (sh) {
+    var msg = $('#cMsg', sh), go = $('#cGo', sh);
+    $('#xClose', sh).addEventListener('click', closeSheet);
+    go.addEventListener('click', function () {
+      var conn = parseConnLink($('#cLink', sh).value);
+      if (!conn) { msg.textContent = 'That isn\'t a connection link. It starts with https://script.google.com/macros/s/ and contains ?k='; msg.className = 'small up'; return; }
+      go.disabled = true; go.textContent = 'Checking…'; msg.textContent = ''; msg.className = 'small';
+      api({ action: 'ping' }, conn).then(function (j) {
+        closeSheet();
+        afterConnect(conn, j);
+      }, function (e) { go.disabled = false; go.textContent = 'Connect'; msg.textContent = e.message; msg.className = 'small up'; });
+    });
+  });
+}
+
+function afterConnect(conn, ping) {
+  if (S.sample) S = blank();
+  var here = S.tx.length, there = ping.count || 0;
+  var setConn = function () { S.sync = Object.assign(blank().sync, { url: conn.url, key: conn.key, sheetUrl: ping.sheetUrl || '' }); };
+  if (there && !here) {
+    setConn(); save();
+    openSheet('<h3>Connected to "' + esc(ping.name || 'your sheet') + '"</h3><p class="muted" style="margin:0">Your sheet already has <b>' + there + ' entries</b>. Bring them to this phone?</p>' +
+      '<button type="button" class="btn block" id="aPull">Bring them here</button><button type="button" class="btn ghost block" id="aLater">Not now</button>', function (sh) {
+      $('#aLater', sh).addEventListener('click', function () { closeSheet(); render(); });
+      $('#aPull', sh).addEventListener('click', function () { closeSheet(); restoreFromSheet(); });
+    });
     return;
   }
-  download(blob, name);
-}
-function download(blob, name) {
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = name;
-  document.body.appendChild(a); a.click();
-  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-  toast('Saved ' + name);
+  if (there && here) {
+    openSheet('<h3>Both have data</h3><p class="muted" style="margin:0">This phone has <b>' + here + ' entries</b> and the sheet has <b>' + there + '</b>. Which one should be kept?</p>' +
+      '<button type="button" class="btn block" id="aPhone">Keep this phone\'s data (replaces the sheet)</button>' +
+      '<button type="button" class="btn ghost block" id="aSheet">Use the sheet\'s data (replaces this phone)</button>' +
+      '<button type="button" class="btn ghost block" id="aNo">Cancel</button>', function (sh) {
+      $('#aNo', sh).addEventListener('click', closeSheet);
+      $('#aPhone', sh).addEventListener('click', function () { setConn(); S.sync.full = true; S.sync.meta = true; save(); closeSheet(); render(); syncNow(true); });
+      $('#aSheet', sh).addEventListener('click', function () { setConn(); save(); closeSheet(); restoreFromSheet(); });
+    });
+    return;
+  }
+  setConn(); S.sync.full = !!here; S.sync.meta = true; save(); render();
+  toast('Connected to Google Sheet' + (here ? '. Sending ' + here + ' entries…' : ''));
+  syncNow(false);
 }
 
-function rowsForExport(list) {
-  return list.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }).map(function (t) {
-    var c = cardById(t.card), d = parseLocal(t.date), bm = billMonth(t), st = c && stmtDay(c) ? statement(c, bm) : null;
-    return { Date: d, Card: c ? c.name : '', 'Amount (₹)': +t.amount, Kind: t.kind, Category: t.category || '', Note: t.note || '',
-             'Bill Month': ymLabel(bm), Cycle: st ? dayLabel(st.start) + ' – ' + dayLabel(st.end) : 'Calendar month' };
+function confirmRestore() {
+  openSheet('<h3>Restore from Google Sheet?</h3><p class="muted" style="margin:0">This replaces the ' + S.tx.length + ' entries and cards on this phone with what is in your sheet.' +
+    (pendingCount() ? ' <b>' + pendingCount() + ' changes on this phone have not reached the sheet yet and will be lost.</b>' : '') + '</p>' +
+    '<button type="button" class="btn block" id="pYes">Restore from sheet</button><button type="button" class="btn ghost block" id="pNo">Cancel</button>', function (sh) {
+    $('#pNo', sh).addEventListener('click', closeSheet);
+    $('#pYes', sh).addEventListener('click', function () { closeSheet(); restoreFromSheet(); });
   });
 }
-function toCsv() {
-  var rows = rowsForExport(S.tx);
-  var head = ['Date', 'Card', 'Amount (₹)', 'Kind', 'Category', 'Note', 'Bill Month', 'Cycle'];
-  var q = function (v) { v = v instanceof Date ? toLocal(v).replace('T', ' ') : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-  return [head.join(',')].concat(rows.map(function (r) { return head.map(function (h) { return q(r[h]); }).join(','); })).join('\n');
-}
 
-function exportXlsx() {
-  if (!S.tx.length) { toast('Nothing to export yet'); return; }
-  var go = function () {
-    var XLSX = window.XLSX, wb = XLSX.utils.book_new();
-    var widths = [{ wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 28 }, { wch: 12 }, { wch: 18 }];
-    var add = function (name, rows, w) { var ws = XLSX.utils.json_to_sheet(rows, { cellDates: true }); ws['!cols'] = w || widths; XLSX.utils.book_append_sheet(wb, ws, name); return ws; };
-    // Summary
-    var months = {}; S.tx.forEach(function (t) { months[billMonth(t)] = 1; });
-    var ms = Object.keys(months).sort();
-    add('Summary', ms.map(function (m) {
-      var list = inMonth(m), r = { 'Bill Month': ymLabel(m), 'Spent (₹)': sum(expenses(list)) };
-      S.cards.forEach(function (c) { r[c.name] = chargedOn(c.id, m); });
-      r['Transfers / lent (₹)'] = sum(list.filter(function (t) { return t.kind === 'Transfer' || t.kind === 'Lent'; }));
-      return r;
-    }), [{ wch: 12 }, { wch: 12 }].concat(S.cards.map(function () { return { wch: 14 }; })).concat([{ wch: 18 }]));
-    add('All entries', rowsForExport(S.tx));
-    // One tab per bill month, like a closed statement book
-    ms.slice().reverse().forEach(function (m) { add(m.split('-')[0] + '-' + MON[+m.split('-')[1] - 1], rowsForExport(inMonth(m))); });
-    var bills = [];
-    S.cards.filter(function (c) { return stmtDay(c); }).forEach(function (c) {
-      ms.forEach(function (m) {
-        var amt = chargedOn(c.id, m); if (!amt) return;
-        var st = statement(c, m);
-        bills.push({ Card: c.name, 'Bill Month': ymLabel(m), 'Cycle start': st.start, 'Cycle end': st.end, 'Statement date': st.date, 'Due date': st.due || '', 'Total (₹)': amt, Paid: S.paid[c.id + '|' + m] ? 'Yes' : 'No' });
-      });
+function restoreFromSheet() {
+  toast('Reading your Google Sheet…');
+  return api({ action: 'pull' }).then(function (j) {
+    var sync = S.sync;
+    S = blank();
+    S.sync = Object.assign(sync, { ops: [], error: '' });
+    S.cards = (j.cards || []).map(function (c, i) {
+      return { id: c.id, name: c.name, type: CARD_TYPES.indexOf(c.type) >= 0 ? c.type : 'Debit', stmtDay: +c.stmtDay || '', dueDay: +c.dueDay || '',
+               dueDays: '', limit: +c.limit || '', color: c.color || CARD_COLORS[i % CARD_COLORS.length] };
     });
-    if (bills.length) add('Card bills', bills, [{ wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 6 }]);
-    add('Cards', S.cards.map(function (c) { return { Card: c.name, Type: c.type, 'Statement day': c.stmtDay || '', 'Payment due day': c.dueDay || (c.dueDays ? c.dueDays + ' days after statement' : ''), 'Credit limit (₹)': c.limit || '' }; }), [{ wch: 18 }, { wch: 8 }, { wch: 14 }, { wch: 10 }, { wch: 14 }]);
-    var out = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellDates: true });
-    saveFile(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'selavu-' + toLocal(new Date()).slice(0, 10) + '.xlsx');
-  };
-  if (window.XLSX) return go();
-  toast('Preparing Excel file…');
-  var s = document.createElement('script');
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-  s.onload = go;
-  s.onerror = function () { toast('Excel export needs internet once. Use Export CSV offline.'); };
-  document.head.appendChild(s);
-}
-
-// ---------- Import ----------
-var pendingImport = 'csv';
-function readFile(f) {
-  var r = new FileReader();
-  r.onload = function () {
-    var text = String(r.result);
-    if (pendingImport === 'json' || /^\s*\{/.test(text)) return restoreJson(text);
-    importCsvDialog(text);
-  };
-  r.readAsText(f);
-}
-function restoreJson(text) {
-  try {
-    var o = JSON.parse(text), d = o.data || o;
-    if (!d || !Array.isArray(d.tx) || !Array.isArray(d.cards)) throw new Error('not a backup');
-    openSheet('<h3>Restore this backup?</h3><p class="muted" style="margin:0">It has ' + d.tx.length + ' entries and ' + d.cards.length + ' cards' + (o.exported ? ', saved ' + esc(o.exported.replace('T', ' ')) : '') + '. It replaces what is on this phone now (' + S.tx.length + ' entries).</p>' +
-      '<button type="button" class="btn block" id="ok">Replace with backup</button><button type="button" class="btn ghost block" id="no">Cancel</button>', function (sh) {
-      $('#no', sh).addEventListener('click', closeSheet);
-      $('#ok', sh).addEventListener('click', function () { S = Object.assign(blank(), d, { v: 1 }); clearBm(); save(); closeSheet(); ui.tab = 'home'; render(); toast('Backup restored'); });
+    S.tx = (j.tx || []).map(function (t) {
+      return { id: t.id, date: t.date, card: t.card, amount: +t.amount, kind: KINDS.indexOf(t.kind) >= 0 ? t.kind : 'Expense',
+               category: t.category || '', note: t.note || '' };
     });
-  } catch (e) { toast('That file is not a Selavu backup'); }
+    S.budgets = j.budgets || {}; S.paid = j.paid || {};
+    S.lastCard = S.cards[0] ? S.cards[0].id : null;
+    // Write back once so every row carries this app's bill month and cycle.
+    S.sync.full = true; S.sync.meta = true;
+    save(); ui.tab = 'home'; render();
+    var noDay = S.cards.filter(function (c) { return c.type === 'Credit' && !c.stmtDay; });
+    toast(S.tx.length + ' entries restored' + (noDay.length ? '. Set the statement day for ' + noDay.map(function (c) { return c.name; }).join(', ') : ''));
+    if (noDay.length) { ui.tab = 'settings'; render(); }
+    scheduleSync(1500);
+  }, function (e) { toast(e.message); });
 }
 
-function parseCsv(text) {
-  var rows = [], row = [], f = '', q = false;
-  text = text.replace(/^﻿/, '');
-  for (var i = 0; i < text.length; i++) {
-    var ch = text[i];
-    if (q) { if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; }
-    else if (ch === '"') q = true;
-    else if (ch === ',') { row.push(f); f = ''; }
-    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
-    else f += ch;
-  }
-  if (f || row.length) { row.push(f); rows.push(row); }
-  return rows.filter(function (r) { return r.some(function (c) { return c.trim(); }); });
-}
-
-// Accepts this app's CSV and the old Google Sheet tabs (Date, Card, Amount, Category, Type).
-function parseDate(s, dayFirst) {
-  s = String(s || '').trim();
-  var m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/.exec(s);
-  if (m) return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0));
-  m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]m)?)?/i.exec(s);
-  if (m) {
-    var a = +m[1], b = +m[2], y = +m[3] < 100 ? 2000 + +m[3] : +m[3], h = +(m[4] || 0);
-    if (m[6]) { h = h % 12 + (/p/i.test(m[6]) ? 12 : 0); }
-    var day = dayFirst ? a : b, mon = dayFirst ? b : a;
-    if (a > 12) { day = a; mon = b; } else if (b > 12) { day = b; mon = a; }
-    return new Date(y, mon - 1, day, h, +(m[5] || 0));
-  }
-  var n = +s;
-  if (n > 20000 && n < 80000) { var d = new Date(Date.UTC(1899, 11, 30) + Math.round(n * 864e5)); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes()); }
-  return new Date(NaN);
-}
-
-function buildImport(rows, dayFirst) {
-  var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
-  var col = function (re) { for (var i = 0; i < head.length; i++) if (re.test(head[i])) return i; return -1; };
-  var iDate = col(/^date/), iCard = col(/card/), iAmt = col(/amount/), iKind = col(/^kind/), iCat = col(/categ/), iNote = col(/note|merchant|description/);
-  if (iDate < 0 || iCard < 0 || iAmt < 0) return { error: 'The first row needs columns named Date, Card and Amount.' };
-  var newCards = {}, tx = [], skipped = 0;
-  var findCard = function (name) {
-    for (var i = 0; i < S.cards.length; i++) if (S.cards[i].name.toLowerCase() === name.toLowerCase()) return S.cards[i];
-    return newCards[name.toLowerCase()];
-  };
-  rows.slice(1).forEach(function (r) {
-    var d = parseDate(r[iDate], dayFirst), amt = +String(r[iAmt] || '').replace(/[₹,\s]/g, ''), name = String(r[iCard] || '').trim();
-    if (isNaN(d) || !(amt > 0) || !name) { skipped++; return; }
-    var card = findCard(name);
-    if (!card) {
-      card = newCards[name.toLowerCase()] = { id: uid(), name: name, type: /\bcc\b|credit/i.test(name) ? 'Credit' : /cash/i.test(name) ? 'Cash' : 'Debit',
-        stmtDay: '', dueDays: '', limit: '', color: CARD_COLORS[(S.cards.length + Object.keys(newCards).length) % CARD_COLORS.length] };
-    }
-    var rawCat = iCat >= 0 ? String(r[iCat] || '').trim() : '', kind = iKind >= 0 ? String(r[iKind] || '').trim() : '';
-    var note = iNote >= 0 ? String(r[iNote] || '').trim() : '';
-    var cat = rawCat;
-    if (CATS.indexOf(rawCat) < 0) {
-      var m = MAP[rawCat.toLowerCase()];
-      cat = m ? m[1] : 'Other';
-      if (!kind && m) kind = m[0];
-      if (rawCat && note.toLowerCase() !== rawCat.toLowerCase()) note = note ? rawCat + ' · ' + note : rawCat;
-    }
-    if (KINDS.indexOf(kind) < 0) kind = 'Expense';
-    tx.push({ id: uid(), date: toLocal(d), card: card.id, amount: Math.round(amt * 100) / 100, kind: kind, category: kind === 'Expense' ? cat : '', note: note });
-  });
-  return { tx: tx, newCards: Object.keys(newCards).map(function (k) { return newCards[k]; }), skipped: skipped };
-}
-
-function importCsvDialog(text) {
-  var rows = parseCsv(text);
-  if (rows.length < 2) { toast('That file has no rows'); return; }
-  var dayFirst = true;
-  var show = function () {
-    var res = buildImport(rows, dayFirst);
-    if (res.error) { closeSheet(); toast(res.error); return; }
-    var first = res.tx[0], sample = first ? parseLocal(first.date) : null;
-    openSheet('<h3>Import ' + res.tx.length + ' entries?</h3>' +
-      '<div class="seg" id="df"><button type="button" data-v="1" aria-pressed="' + dayFirst + '">Dates are DD/MM</button><button type="button" data-v="0" aria-pressed="' + !dayFirst + '">Dates are MM/DD</button></div>' +
-      (sample ? '<p class="small muted" style="margin:0">First row reads as <b>' + sample.getDate() + ' ' + MON[sample.getMonth()] + ' ' + sample.getFullYear() + '</b>. If that looks wrong, switch the date format above.</p>' : '') +
-      (res.newCards.length ? '<p class="small" style="margin:0">New cards to add: <b>' + res.newCards.map(function (c) { return esc(c.name) + ' (' + c.type + ')'; }).join(', ') + '</b>. Set each credit card\'s statement day in Settings afterwards.</p>' : '') +
-      (res.skipped ? '<p class="small muted" style="margin:0">' + res.skipped + ' rows skipped (no date, card or amount).</p>' : '') +
-      '<p class="small muted" style="margin:0">Old category names are matched to the new list. The original text is kept in the note.</p>' +
-      '<button type="button" class="btn block" id="ok">Import</button><button type="button" class="btn ghost block" id="no">Cancel</button>', function (sh) {
-      $$('#df button', sh).forEach(function (b) { b.addEventListener('click', function () { dayFirst = b.dataset.v === '1'; show(); }); });
-      $('#no', sh).addEventListener('click', closeSheet);
-      $('#ok', sh).addEventListener('click', function () {
-        if (S.sample) S = blank();
-        S.cards = S.cards.concat(res.newCards); S.tx = S.tx.concat(res.tx);
-        if (!S.lastCard && S.cards[0]) S.lastCard = S.cards[0].id;
-        clearBm(); save(); closeSheet(); ui.tab = res.newCards.some(function (c) { return c.type === 'Credit'; }) ? 'settings' : 'home'; render();
-        toast(res.tx.length + ' entries imported' + (ui.tab === 'settings' ? '. Now set statement days.' : ''));
-      });
-    });
-  };
-  show();
-}
+window.addEventListener('online', function () { syncStatusChanged(); scheduleSync(300); });
+window.addEventListener('offline', syncStatusChanged);
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') scheduleSync(300); });
 
 // ---------- Sample data ----------
 function loadSample() {
@@ -935,7 +958,8 @@ function loadSample() {
   }
   tx.push({ id: uid(), date: toLocal(new Date(now.getFullYear(), now.getMonth(), Math.max(now.getDate() - 10, 1), 18, 0)), card: 'upi', amount: 10000, kind: 'Expense', category: 'Rent & Housing', note: 'House rent' });
   tx.push({ id: uid(), date: toLocal(new Date(now.getFullYear(), now.getMonth(), Math.max(now.getDate() - 6, 1), 20, 0)), card: 'upi', amount: 2000, kind: 'Lent', category: '', note: 'Friend' });
-  S = Object.assign(blank(), { cards: cards, tx: tx, budgets: { 'Food & Dining': 6000, 'Groceries': 5000, 'Fuel': 4000 }, lastCard: 'sbi', sample: true });
+  // Sample data is never synced (syncOn() is false while sample is set), but keep any sheet connection.
+  S = keepSync(Object.assign(blank(), { cards: cards, tx: tx, budgets: { 'Food & Dining': 6000, 'Groceries': 5000, 'Fuel': 4000 }, lastCard: 'sbi', sample: true }));
   save(); render(); toast('Sample data loaded. Clear it any time.');
 }
 
@@ -960,8 +984,10 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 if ('serviceWorker' in navigator && location.protocol === 'https:' && window.top === window.self) {
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__selavu = { billMonthFor: billMonthFor, statement: statement, parseDate: parseDate, buildImport: buildImport, parseCsv: parseCsv, state: function () { return S; } };
+window.__selavu = { billMonthFor: billMonthFor, statement: statement, parseConnLink: parseConnLink, syncNow: syncNow, state: function () { return S; } };
 render();
+syncStatusChanged();
 handleLink();
+scheduleSync(1000);
 })();
 </script>
