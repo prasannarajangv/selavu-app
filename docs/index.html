@@ -46,6 +46,9 @@
   --shadow: none; color-scheme: dark }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* Text boxes must be 16px or larger, or iPhone zooms the page when one is tapped. */
+input, select, textarea { font-size: max(16px, 1em); }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body { min-height: 100%; }
 body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font); margin: 0; font-variant-numeric: tabular-nums; }
 button, input, select { font: inherit; color: inherit; }
@@ -144,6 +147,9 @@ nav.tabs .add svg { width: 28px; height: 28px; stroke-width: 2.4; }
   border-radius: 20px 20px 0 0; padding-block: 10px calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; animation: up .22s ease-out; }
 @keyframes up { from { transform: translateY(30px); opacity: .6 } to { transform: none; opacity: 1 } }
 @media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
+.sheet-foot { position: sticky; bottom: calc(-20px - env(safe-area-inset-bottom, 0px)); z-index: 1; display: grid; gap: 8px; background: var(--surface);
+  padding: 10px 0 calc(20px + env(safe-area-inset-bottom, 0px)); margin: -4px 0 calc(-20px - env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 12px -10px rgba(0,0,0,.25); }
 .grab { width: 40px; height: 5px; border-radius: 9px; background: var(--line); margin: 0 auto; }
 .sheet h3 { margin: 0; font: 600 19px var(--display); }
 label.f { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
@@ -176,7 +182,7 @@ label.f { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var
 .set-row:last-child { border-bottom: 0; }
 .set-row > div { min-width: 0; }
 .budget-grid { display: grid; grid-template-columns: 1fr 120px; gap: 8px 12px; align-items: center; }
-.budget-grid .in { padding: 8px 10px; font-size: 15px; }
+.budget-grid .in { padding: 8px 10px; font-size: 16px; }
 .stmt { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: center; }
 .stmt:last-child { border-bottom: 0; }
 .toggle { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; }
@@ -850,7 +856,21 @@ function openSheet(html, mount) {
   back.addEventListener('click', function (e) { if (e.target === back) closeSheet(); });
   document.addEventListener('keydown', escClose);
   mount($('.sheet', root));
+  fitSheet();
 }
+// Keep forms above the on-screen keyboard (iPhone and Android shrink only the visual viewport).
+function fitSheet() {
+  var back = $('.sheet-back'), vv = window.visualViewport;
+  if (!back || !vv) return;
+  back.style.top = vv.offsetTop + 'px';
+  back.style.height = vv.height + 'px';
+  back.style.bottom = 'auto';
+}
+if (window.visualViewport) { visualViewport.addEventListener('resize', fitSheet); visualViewport.addEventListener('scroll', fitSheet); }
+// A focused field inside a form scrolls into view above the keyboard.
+document.addEventListener('focusin', function (e) {
+  if (e.target.closest && e.target.closest('.sheet')) setTimeout(function () { try { e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (x) {} }, 300);
+});
 function escClose(e) { if (e.key === 'Escape') closeSheet(); }
 function closeSheet() { $('#sheetRoot').innerHTML = ''; document.removeEventListener('keydown', escClose); if (staleView) { staleView = false; render(); } }
 
@@ -903,7 +923,7 @@ function openExpense(t, prefill) {
     '<label class="f" for="fDate">When<input class="in" id="fDate" type="datetime-local" value="' + esc(t.date) + '"></label>' +
     '<div class="small muted" id="fCycle"></div>' +
     (edit && shared() && t.by && personName(t.by) ? '<div class="small muted">Logged by ' + esc(personName(t.by)) + '</div>' : '') +
-    '<button type="button" class="btn block" id="fSave">' + (edit ? 'Save changes' : 'Save') + '</button>' +
+    '<div class="sheet-foot"><button type="button" class="btn block" id="fSave">' + (edit ? 'Save changes' : 'Save') + '</button></div>' +
     (edit ? '<button type="button" class="btn danger block" id="fDel">Delete entry</button>' : '');
   openSheet(html, function (sh) {
     var amt = $('#fAmt', sh);
@@ -1000,7 +1020,7 @@ function openCard(c) {
     '<label class="f" for="cLimit">Credit limit <span class="hint">(optional)</span><input class="in" id="cLimit" inputmode="numeric" value="' + esc(c.limit) + '"></label></div>' +
     '<div style="display:grid;gap:6px"><span class="small muted" style="font-weight:600">Colour</span><div class="chips" id="cColor">' +
     CARD_COLORS.map(function (col) { return '<button type="button" class="chip" data-v="' + col + '" aria-pressed="' + (c.color === col) + '" aria-label="Colour ' + col + '"><span class="swatch" style="background:' + col + ';width:16px;height:16px"></span></button>'; }).join('') + '</div></div>' +
-    '<button type="button" class="btn block" id="cSave">' + (edit ? 'Save card' : 'Add card') + '</button>' +
+    '<div class="sheet-foot"><button type="button" class="btn block" id="cSave">' + (edit ? 'Save card' : 'Add card') + '</button></div>' +
     (edit ? '<button type="button" class="btn danger block" id="cDel">' + (used ? 'Delete card and its ' + used + ' entries' : 'Delete card') + '</button>' : '');
   openSheet(html, function (sh) {
     var typeUi = function () { $('#cCredit', sh).hidden = c.type !== 'Credit'; };
@@ -1334,7 +1354,7 @@ function openConnect() {
   var html = '<div class="row"><h3>Connect Google Sheet</h3><button type="button" class="linkish" id="xClose">Cancel</button></div>' +
     '<p class="small muted" style="margin:0">In your copy of the Selavu sheet choose <b>Selavu → Get connection link for the app</b>, copy the link, and paste it here. ' +
     'To share one sheet with your family, paste the same link on each phone.</p>' +
-    '<label class="f" for="cLink">Connection link<textarea class="in" id="cLink" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" style="resize:none;font-size:14px"></textarea></label>' +
+    '<label class="f" for="cLink">Connection link<textarea class="in" id="cLink" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" style="resize:none;font-size:16px"></textarea></label>' +
     '<p class="small" id="cMsg" style="margin:0" aria-live="polite"></p>' +
     '<button type="button" class="btn block" id="cGo">Connect</button>';
   openSheet(html, function (sh) {
