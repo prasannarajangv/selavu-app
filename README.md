@@ -246,10 +246,11 @@ If your spouse pays with your add-on card, they can add it on their phone as the
 
 **Set it up**
 
-1. **On your phone** (connected to the sheet): **Settings → People → Add my name**. Your existing cards and entries become yours. Add the other family members with **+ Add person** (optional; they can also add themselves).
-2. **Install Selavu on their phone** (step 2; on Android use **Chrome → ⋮ → Add to Home screen / Install app**).
-3. On their phone: **Settings → Connect Google Sheet** → paste **the same connection link** → **Connect** → choose their name under **Who uses this phone?** (or type it).
-4. They add their own cards (**Settings → + Add card**) and start logging.
+1. **On each phone:** **Settings → Connect Google Sheet** → paste **the same connection link** → **Connect** → type **your own name**. (A phone that is already connected: **Settings → Your name → Add my name**.)
+   The phone now shows only that person's cards and spending. Nobody else's name or entries appear on it.
+2. **Install Selavu on the other phone** first if needed (step 2; on Android use **Chrome → ⋮ → Install app**).
+3. Budgets set in **Settings → Monthly budgets** are personal to each phone.
+4. Each person adds their own cards (**Settings → + Add card**) and starts logging.
 
 > Every phone in the household must use the same connection link, and the sheet must run the latest script (see [Updating the sheet script](#11-updating-the-sheet-script)).
 

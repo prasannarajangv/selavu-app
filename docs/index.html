@@ -353,6 +353,10 @@ function scope(list) {
   return ui.who ? list.filter(function (t) { return whoOf(t) === ui.who; }) : list;
 }
 // This phone's cards first, then joint, then the others.
+// Budgets are per person on a personal phone (stored as "personId|Category"), otherwise for the household.
+function budgetKey(cat) { return personal() ? S.me + '|' + cat : cat; }
+function budget(cat) { return +S.budgets[budgetKey(cat)] || 0; }
+
 function cardsSorted() {
   var rank = function (c) { return c.owner === S.me ? 0 : (!c.owner || c.owner === 'family') ? 1 : 2; };
   return myCards().map(function (c, i) { return [rank(c), i, c]; }).sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }).map(function (x) { return x[2]; });
@@ -512,7 +516,7 @@ function viewHome() {
   var p = ym.split('-'), dim = new Date(+p[0], +p[1], 0).getDate();
   var days = ym === now ? new Date().getDate() : dim;
   // Budgets are for the whole household, so they show only on the "All" view.
-  var budgetTotal = ui.who ? 0 : CATS.reduce(function (a, c) { return a + (+S.budgets[c] || 0); }, 0);
+  var budgetTotal = ui.who ? 0 : CATS.reduce(function (a, c) { return a + budget(c); }, 0);
 
   var h = sampleBanner() + whoBar();
   h += '<section class="card hero"><div class="row"><h2>' + (ui.who ? esc(personName(ui.who)) + ' · ' : 'Spent in ') + esc(ymLabel(ym)) + ' bills</h2>' +
@@ -571,7 +575,7 @@ function viewHome() {
   if (!cats.length) h += '<p class="muted small" style="margin:0">No spending in this bill month yet. Tap + to log one.</p>';
   else {
     h += '<div class="donut-wrap">' + donut(cats, spent) + '<div class="legend">' + cats.map(function (c) {
-      var b = ui.who ? 0 : +S.budgets[c.name] || 0;
+      var b = ui.who ? 0 : budget(c.name);
       return '<div class="leg"><span class="swatch" style="background:' + c.color + '"></span><span class="nm">' + catIcon(c.name) + ' ' + esc(c.name) + '</span><b>' + inr.format(c.value) + '</b>' +
         (b ? meter(c.value, b) : '') + '</div>';
     }).join('') + '</div></div>';
@@ -755,25 +759,25 @@ function viewSettings() {
   });
   h += '</section>';
 
-  h += '<section class="card"><div class="row"><h2>People</h2>' + (S.people.length ? '<button type="button" class="linkish" data-act="new-person">+ Add person</button>' : '') + '</div>';
-  if (!S.people.length) {
-    h += '<p class="small muted" style="margin:0">Tracking for the family? Add your name, then each family member who spends. Every entry gets tagged with who spent it (or Family), and you can filter by person. ' +
-      'Each person can log on their own phone into the same Google Sheet.</p><button type="button" class="btn ghost block" data-act="new-person">Add my name</button>';
+  // Each phone belongs to one person; other people's names stay in the shared sheet only.
+  var meP = personById(S.me);
+  h += '<section class="card"><h2>Your name</h2>';
+  if (meP) {
+    h += '<div class="set-row"><div><div class="cc-name">' + esc(meP.name) + ' <span class="pill">This phone</span></div>' +
+      '<div class="small muted">' + myTx().length + (myTx().length === 1 ? ' entry' : ' entries') + ' · shown as ' + esc(meP.name) + ' in the Google Sheet</div></div>' +
+      '<button type="button" class="linkish" data-person="' + meP.id + '">Edit</button></div>';
+  } else if (S.people.length) {
+    h += '<p class="small muted" style="margin:0">Tell Selavu whose phone this is. It then shows only your cards and spending.</p>' +
+      '<button type="button" class="btn block" data-act="who">Set my name</button>';
   } else {
-    S.people.forEach(function (p) {
-      h += '<div class="set-row"><div><div class="cc-name">' + esc(p.name) + (p.id === S.me ? ' <span class="pill">This phone</span>' : '') + '</div>' +
-        '<div class="small muted">' + S.tx.filter(function (t) { return whoOf(t) === p.id; }).length + ' entries</div></div>' +
-        '<button type="button" class="linkish" data-person="' + p.id + '">Edit</button></div>';
-    });
-    if (!personById(S.me)) h += '<button type="button" class="btn block" data-act="who">Who uses this phone?</button>';
-    else if (S.people.length > 1) h += '<button type="button" class="linkish" style="justify-self:start" data-act="who">Change who uses this phone</button>';
-    if (S.people.length === 1) h += '<p class="small muted" style="margin:0">Add a family member to start tagging who spent what.</p>';
+    h += '<p class="small muted" style="margin:0">Optional. Needed when you share one Google Sheet with family: each phone shows only its own person\'s cards and spending, and the sheet shows who spent what.</p>' +
+      '<button type="button" class="btn ghost block" data-act="new-person">Add my name</button>';
   }
   h += '</section>';
 
-  h += '<section class="card"><h2>Monthly budgets</h2><p class="small muted" style="margin:0">Optional, for the whole household. Leave blank for no budget. Bars turn amber at 80% and red at 100%.</p><div class="budget-grid">' +
+  h += '<section class="card"><h2>Monthly budgets</h2><p class="small muted" style="margin:0">' + (personal() ? 'Your own monthly limits (only this phone uses them).' : 'Optional.') + ' Leave blank for no budget. Bars turn amber at 80% and red at 100%.</p><div class="budget-grid">' +
     CATS.map(function (c, i) { return '<label for="b' + i + '" style="display:flex;gap:8px;align-items:center"><span aria-hidden="true">' + CAT_ICONS[i] + '</span>' + esc(c) + '</label>' +
-      '<input class="in" id="b' + i + '" data-budget="' + esc(c) + '" inputmode="numeric" placeholder="₹" value="' + (S.budgets[c] || '') + '">'; }).join('') + '</div></section>';
+      '<input class="in" id="b' + i + '" data-budget="' + esc(budgetKey(c)) + '" inputmode="numeric" placeholder="₹" value="' + (budget(c) || '') + '">'; }).join('') + '</div></section>';
 
   if (!syncOn()) {
     h += '<section class="card"><h2>Google Sheet</h2><p class="small muted" style="margin:0">Connect your own Google Sheet and every entry is copied there automatically. ' +
@@ -1067,7 +1071,7 @@ function openPerson(p) {
   p = p ? Object.assign({}, p) : { id: uid(), name: '' };
   var used = S.tx.filter(function (t) { return t.for === p.id || t.by === p.id; }).length + S.cards.filter(function (c) { return c.owner === p.id; }).length;
   var html = '<div class="row"><h3>' + (edit ? 'Edit person' : first ? 'Your name' : 'Add a person') + '</h3><button type="button" class="linkish" id="xClose">Cancel</button></div>' +
-    (first ? '<p class="small muted" style="margin:0">Your existing cards and entries will be tagged as yours. Add family members next.</p>' : '') +
+    (first ? '<p class="small muted" style="margin:0">Your existing cards and entries will be tagged as yours.</p>' : '') +
     '<label class="f" for="pName">Name<input class="in" id="pName" value="' + esc(p.name) + '" autocomplete="off" maxlength="20"></label>' +
     '<button type="button" class="btn block" id="pSave">Save</button>' +
     (edit ? '<button type="button" class="btn danger block" id="pDel">Remove ' + esc(p.name) + '</button>' : '');
@@ -1093,7 +1097,7 @@ function openPerson(p) {
         S.tx.forEach(function (t) { if (t.for === p.id || t.by === p.id) queue('tx', t.id); });
       }
       save(); closeSheet(); render();
-      toast(edit ? 'Saved' : first ? 'Hi ' + name + '! Now add a family member.' : name + ' added. Entries can now be tagged per person.');
+      toast(edit ? 'Saved' : first ? 'Hi ' + name + '!' : name + ' added. Entries can now be tagged per person.');
     });
     if (edit) $('#pDel', sh).addEventListener('click', function () {
       if (used) { toast(p.name + ' has ' + used + ' entries or cards. Rename instead, or change those first.'); return; }
@@ -1108,31 +1112,29 @@ function openPerson(p) {
 // "Who uses this phone?" Pick a person from the household, or add yourself.
 // mine: { tx: [ids], cards: [ids] } logged on this phone before it joined the sheet; untagged ones become this person's.
 function openWho(after, mine) {
-  var html = '<h3>Who uses this phone?</h3><p class="small muted" style="margin:0">New entries from this phone are tagged with this name. Your cards are listed first.</p>' +
-    '<div class="chips" id="wList">' + S.people.map(function (p) { return '<button type="button" class="chip" data-v="' + p.id + '" aria-pressed="' + (S.me === p.id) + '">' + esc(p.name) + '</button>'; }).join('') + '</div>' +
-    '<label class="f" for="wNew">Not listed? Type your name<input class="in" id="wNew" autocomplete="off" maxlength="20"></label>' +
+  var cur = personById(S.me);
+  var html = '<h3>Your name</h3><p class="small muted" style="margin:0">This phone will show only your cards and spending. Your entries appear under this name in the shared Google Sheet.</p>' +
+    '<label class="f" for="wNew">Name<input class="in" id="wNew" autocomplete="off" maxlength="20" value="' + esc(cur ? cur.name : '') + '"></label>' +
+    '<p class="hint" style="margin:0">Used this sheet on another phone before? Type the same name to get your entries back.</p>' +
     '<button type="button" class="btn block" id="wSave">Done</button>';
   openSheet(html, function (sh) {
-    var pickId = S.me;
-    $$('#wList button', sh).forEach(function (b) { b.addEventListener('click', function () {
-      $$('#wList button', sh).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); pickId = b.dataset.v; $('#wNew', sh).value = ''; }); });
+    setTimeout(function () { $('#wNew', sh).focus(); }, 60);
     $('#wSave', sh).addEventListener('click', function () {
-      var name = $('#wNew', sh).value.trim();
-      if (name) {
-        var same = S.people.filter(function (x) { return x.name.toLowerCase() === name.toLowerCase(); })[0];
-        if (same) pickId = same.id;
-        else if (/^(family|joint)$/i.test(name)) { toast('Pick a different name'); return; }
-        else { var np = { id: uid(), name: name }; S.people.push(np); queue('person', np.id); pickId = np.id; }
-      }
-      if (!personById(pickId)) { toast('Pick your name or type it'); return; }
+      var name = $('#wNew', sh).value.trim(), pickId;
+      if (!name) { toast('Type your name'); return; }
+      if (/^(family|joint)$/i.test(name)) { toast('Pick a different name'); return; }
+      var same = S.people.filter(function (x) { return x.name.toLowerCase() === name.toLowerCase(); })[0];
+      if (same) pickId = same.id;
+      else { var np = { id: uid(), name: name }; S.people.push(np); queue('person', np.id); pickId = np.id; }
       S.me = pickId;
       if (mine) {
         S.cards.forEach(function (c) { if (!c.owner && mine.cards.indexOf(c.id) >= 0) { c.owner = pickId; queue('card', c.id); } });
         S.tx.forEach(function (t) { if (!t.for && mine.tx.indexOf(t.id) >= 0) { t.for = pickId; t.by = t.by || pickId; queue('tx', t.id); } });
       }
       var first = cardsSorted()[0];
-      if (first && first.owner === S.me) S.lastCard = first.id;
-      save(); closeSheet(); render(); toast('This phone logs as ' + personName(S.me));
+      if (first && (!cardById(S.lastCard) || !myCard(cardById(S.lastCard)))) S.lastCard = first.id;
+      ui.who = '';
+      save(); closeSheet(); render(); toast('This phone is ' + personName(S.me) + '\'s');
       if (after) after();
     });
   });
@@ -1391,7 +1393,7 @@ function connectAndMerge(conn, ping, keepLocal) {
         if (noDay.length) { ui.tab = 'settings'; render(); toast('Set the statement day for ' + noDay.map(function (c) { return c.name; }).join(', ')); }
       });
     };
-    if (S.people.length && !personById(S.me)) openWho(go, mine); else go();
+    if (!personById(S.me)) openWho(go, mine); else go();
   }, function (e) { S.sync = backup; save(); render(); toast(e.message); });
 }
 
